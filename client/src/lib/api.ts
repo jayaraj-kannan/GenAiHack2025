@@ -80,6 +80,13 @@ export async function getWeatherSuggestions(destination: string, duration: numbe
   return apiRequest(`/api/destinations/${encodeURIComponent(destination)}/best-dates?duration=${duration}`);
 }
 
+export async function searchDestinations(query: string) {
+  if (query.length < 2) {
+    return { suggestions: [] };
+  }
+  return apiRequest(`/api/destinations/search?query=${encodeURIComponent(query)}`);
+}
+
 export async function generatePlanB(activity: Activity, reason: string) {
   return apiRequest("/api/activities/plan-b", {
     method: "POST",

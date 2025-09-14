@@ -111,6 +111,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Destination search autocomplete endpoint
+  app.get("/api/destinations/search", async (req, res) => {
+    try {
+      const { query } = req.query;
+      if (!query || typeof query !== "string" || query.length < 2) {
+        return res.json({ suggestions: [] });
+      }
+
+      // Use OpenStreetMap Nominatim for free geocoding (respecting usage policy)
+      const encodedQuery = encodeURIComponent(query);
+      const nominatimUrl = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&limit=5&addressdetails=1&countrycodes=&featureType=city`;
+      
+      try {
+        const response = await fetch(nominatimUrl, {
+          headers: {
+            'User-Agent': 'TripCraft-AI-Planner/1.0'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Geocoding service unavailable');
+        }
+        
+        const data = await response.json();
+        
+        const suggestions = data.map((item: any) => {
+          const address = item.address || {};
+          let displayName = '';
+          
+          if (address.city || address.town || address.village) {
+            displayName = address.city || address.town || address.village;
+            if (address.country) {
+              displayName += `, ${address.country}`;
+            }
+          } else {
+            // Fallback to display_name but clean it up
+            displayName = item.display_name.split(',').slice(0, 2).join(', ');
+          }
+          
+          return {
+            name: displayName,
+            fullName: item.display_name,
+            lat: parseFloat(item.lat),
+            lon: parseFloat(item.lon),
+            type: item.type || 'city'
+          };
+        }).filter((item: any) => item.name && item.name.length > 0);
+
+        res.json({ suggestions });
+      } catch (error) {
+        console.error('Geocoding API error:', error);
+        // Fallback to enhanced mock data if geocoding fails
+        const fallbackSuggestions = [
+          { name: "Paris, France", fullName: "Paris, Île-de-France, France", lat: 48.8566, lon: 2.3522, type: "city" },
+          { name: "Tokyo, Japan", fullName: "Tokyo, Japan", lat: 35.6762, lon: 139.6503, type: "city" },
+          { name: "New York, USA", fullName: "New York, New York, United States", lat: 40.7128, lon: -74.0060, type: "city" },
+          { name: "London, England", fullName: "London, England, United Kingdom", lat: 51.5074, lon: -0.1278, type: "city" },
+          { name: "Rome, Italy", fullName: "Rome, Lazio, Italy", lat: 41.9028, lon: 12.4964, type: "city" },
+          { name: "Barcelona, Spain", fullName: "Barcelona, Catalonia, Spain", lat: 41.3851, lon: 2.1734, type: "city" },
+          { name: "Mumbai, India", fullName: "Mumbai, Maharashtra, India", lat: 19.0760, lon: 72.8777, type: "city" },
+          { name: "Sydney, Australia", fullName: "Sydney, New South Wales, Australia", lat: -33.8688, lon: 151.2093, type: "city" }
+        ].filter(item => item.name.toLowerCase().includes(query.toLowerCase()));
+        
+        res.json({ suggestions: fallbackSuggestions });
+      }
+    } catch (error) {
+      console.error("Error in destination search:", error);
+      res.status(500).json({ error: "Failed to search destinations" });
+    }
+  });
+
   // Weather-based travel date suggestions
   app.get("/api/destinations/:destination/best-dates", async (req, res) => {
     try {
