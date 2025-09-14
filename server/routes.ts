@@ -182,48 +182,199 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Weather-based travel date suggestions
+  // Weather-based travel date suggestions with AI scoring
   app.get("/api/destinations/:destination/best-dates", async (req, res) => {
     try {
       const { destination } = req.params;
       const { duration = 7 } = req.query;
 
-      // Mock weather data - in production would integrate with real weather API
-      const mockWeatherSuggestions = [
-        {
-          dateRange: "Sep 15-17",
-          condition: "Mostly Sunny",
-          temperature: 24,
-          score: 95,
-          description: "Perfect weather conditions for outdoor activities"
-        },
-        {
-          dateRange: "Sep 20-22",
-          condition: "Partly Cloudy", 
-          temperature: 22,
-          score: 85,
-          description: "Good weather with occasional clouds"
-        },
-        {
-          dateRange: "Sep 25-27",
-          condition: "Light Rain",
-          temperature: 19,
-          score: 65,
-          description: "Some rain expected, better for indoor activities"
-        }
-      ];
+      if (!process.env.WEATHER_API_KEY) {
+        // Fallback to enhanced mock data if no API key
+        const mockWeatherSuggestions = [
+          {
+            dateRange: "Sep 15-17",
+            condition: "Mostly Sunny",
+            temperature: 24,
+            score: 95,
+            description: "Perfect weather conditions for outdoor activities"
+          },
+          {
+            dateRange: "Sep 20-22",
+            condition: "Partly Cloudy", 
+            temperature: 22,
+            score: 85,
+            description: "Good weather with occasional clouds"
+          },
+          {
+            dateRange: "Sep 25-27",
+            condition: "Light Rain",
+            temperature: 19,
+            score: 65,
+            description: "Some rain expected, better for indoor activities"
+          }
+        ];
 
-      res.json({
-        destination,
-        duration: parseInt(duration as string),
-        recommendations: mockWeatherSuggestions,
-        generated: new Date().toISOString(),
-      });
+        return res.json({
+          destination,
+          duration: parseInt(duration as string),
+          recommendations: mockWeatherSuggestions,
+          generated: new Date().toISOString(),
+          source: "mock"
+        });
+      }
+
+      // Get weather forecast from WeatherAPI.com
+      const weatherApiUrl = `https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHER_API_KEY}&q=${encodeURIComponent(destination)}&days=14&aqi=no&alerts=no`;
+      
+      try {
+        const weatherResponse = await fetch(weatherApiUrl);
+        if (!weatherResponse.ok) {
+          throw new Error(`Weather API error: ${weatherResponse.status}`);
+        }
+        
+        const weatherData = await weatherResponse.json();
+        const forecast = weatherData.forecast?.forecastday || [];
+        
+        // Generate 3-day windows with AI scoring algorithm
+        const recommendations = [];
+        for (let i = 0; i <= forecast.length - 3; i++) {
+          const window = forecast.slice(i, i + 3);
+          const score = calculateWeatherScore(window);
+          const startDate = new Date(window[0].date);
+          const endDate = new Date(window[2].date);
+          
+          recommendations.push({
+            dateRange: `${formatDateRange(startDate)} - ${formatDateRange(endDate)}`,
+            condition: getMostSignificantCondition(window),
+            temperature: Math.round(window.reduce((sum, day) => sum + day.day.avgtemp_c, 0) / 3),
+            score: Math.round(score),
+            description: generateWeatherDescription(window, score)
+          });
+        }
+        
+        // Sort by score (best first) and take top 3
+        recommendations.sort((a, b) => b.score - a.score);
+        const topRecommendations = recommendations.slice(0, 3);
+
+        res.json({
+          destination: weatherData.location?.name || destination,
+          duration: parseInt(duration as string),
+          recommendations: topRecommendations,
+          generated: new Date().toISOString(),
+          source: "weatherapi"
+        });
+      } catch (error) {
+        console.error('WeatherAPI error:', error);
+        // Fallback to mock data on API failure
+        const fallbackSuggestions = [
+          {
+            dateRange: "Oct 15-17",
+            condition: "Partly Sunny",
+            temperature: 22,
+            score: 85,
+            description: "Generally good weather expected"
+          },
+          {
+            dateRange: "Oct 20-22",
+            condition: "Mostly Cloudy", 
+            temperature: 20,
+            score: 70,
+            description: "Overcast but mild conditions"
+          },
+          {
+            dateRange: "Oct 25-27",
+            condition: "Light Showers",
+            temperature: 18,
+            score: 60,
+            description: "Some rain possible, plan indoor activities"
+          }
+        ];
+
+        res.json({
+          destination,
+          duration: parseInt(duration as string),
+          recommendations: fallbackSuggestions,
+          generated: new Date().toISOString(),
+          source: "fallback"
+        });
+      }
     } catch (error) {
       console.error("Error fetching weather suggestions:", error);
       res.status(500).json({ error: "Failed to fetch weather data" });
     }
   });
+
+  // Helper functions for weather scoring
+  function calculateWeatherScore(threeDayWindow: any[]): number {
+    let score = 100;
+    
+    for (const day of threeDayWindow) {
+      const dayData = day.day;
+      
+      // Temperature scoring (20-25°C is optimal)
+      const temp = dayData.avgtemp_c;
+      if (temp < 10 || temp > 35) score -= 20;
+      else if (temp < 15 || temp > 30) score -= 10;
+      else if (temp >= 20 && temp <= 25) score += 5;
+      
+      // Precipitation scoring
+      const rainMm = dayData.totalprecip_mm || 0;
+      if (rainMm > 20) score -= 25;
+      else if (rainMm > 10) score -= 15;
+      else if (rainMm > 5) score -= 8;
+      else if (rainMm < 1) score += 5;
+      
+      // Wind scoring
+      const windKph = dayData.maxwind_kph || 0;
+      if (windKph > 50) score -= 20;
+      else if (windKph > 30) score -= 10;
+      else if (windKph < 15) score += 3;
+      
+      // Humidity scoring
+      const humidity = dayData.avghumidity || 50;
+      if (humidity > 80) score -= 10;
+      else if (humidity < 30) score -= 5;
+      
+      // UV Index scoring (moderate UV is good)
+      const uvIndex = dayData.uv || 5;
+      if (uvIndex > 10) score -= 10;
+      else if (uvIndex >= 3 && uvIndex <= 7) score += 3;
+    }
+    
+    return Math.max(0, Math.min(100, score));
+  }
+
+  function getMostSignificantCondition(window: any[]): string {
+    const conditions = window.map(day => day.day.condition.text);
+    // Return the most concerning condition or the first one
+    for (const condition of conditions) {
+      if (condition.toLowerCase().includes('rain') || 
+          condition.toLowerCase().includes('storm') ||
+          condition.toLowerCase().includes('snow')) {
+        return condition;
+      }
+    }
+    return conditions[0] || 'Variable';
+  }
+
+  function generateWeatherDescription(window: any[], score: number): string {
+    const avgTemp = window.reduce((sum, day) => sum + day.day.avgtemp_c, 0) / 3;
+    const totalRain = window.reduce((sum, day) => sum + (day.day.totalprecip_mm || 0), 0);
+    
+    if (score >= 90) {
+      return "Excellent weather conditions for all outdoor activities";
+    } else if (score >= 75) {
+      return totalRain > 5 ? "Good weather with occasional light rain" : "Generally pleasant conditions";
+    } else if (score >= 60) {
+      return totalRain > 15 ? "Moderate rain expected, mix of indoor/outdoor activities" : "Average weather conditions";
+    } else {
+      return totalRain > 20 ? "Significant rain likely, focus on indoor attractions" : "Challenging weather conditions";
+    }
+  }
+
+  function formatDateRange(date: Date): string {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
 
   // Booking endpoints
   app.post("/api/trips/:id/bookings", async (req, res) => {
