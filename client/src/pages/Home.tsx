@@ -3,6 +3,7 @@ import { HeroSection } from "@/components/HeroSection";
 import { MoodSelector } from "@/components/MoodSelector";
 import { TripDurationPicker } from "@/components/TripDurationPicker"; 
 import { WeatherSuggestion } from "@/components/WeatherSuggestion";
+import { BudgetEstimator } from "@/components/BudgetEstimator";
 import { ItineraryDisplay } from "@/components/ItineraryDisplay";
 import { DestinationCard } from "@/components/DestinationCard";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -25,6 +26,7 @@ export default function Home() {
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [tripDuration, setTripDuration] = useState(7);
   const [selectedDates, setSelectedDates] = useState("");
+  const [estimatedBudget, setEstimatedBudget] = useState(0);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -131,6 +133,7 @@ export default function Home() {
         destination: selectedDestination,
         duration: tripDuration,
         moods: selectedMoods,
+        budget: estimatedBudget > 0 ? estimatedBudget.toString() : undefined,
         startDate: selectedDates || undefined,
         status: "planning",
       };
@@ -160,6 +163,7 @@ export default function Home() {
     setSelectedMoods([]);
     setTripDuration(7);
     setSelectedDates("");
+    setEstimatedBudget(0);
     setCurrentTripId(null);
   };
 
@@ -224,28 +228,39 @@ export default function Home() {
                 <p className="text-muted-foreground">Tell us your preferences for a personalized experience</p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <Card className="p-6">
+                    <MoodSelector 
+                      selectedMoods={selectedMoods} 
+                      onMoodToggle={handleMoodToggle} 
+                    />
+                  </Card>
+
+                  <Card className="p-6">
+                    <TripDurationPicker 
+                      duration={tripDuration}
+                      onDurationChange={setTripDuration}
+                    />
+                  </Card>
+                </div>
+
                 <Card className="p-6">
-                  <MoodSelector 
-                    selectedMoods={selectedMoods} 
-                    onMoodToggle={handleMoodToggle} 
+                  <BudgetEstimator
+                    destination={selectedDestination}
+                    duration={tripDuration}
+                    moods={selectedMoods}
+                    onBudgetChange={setEstimatedBudget}
                   />
                 </Card>
 
                 <Card className="p-6">
-                  <TripDurationPicker 
-                    duration={tripDuration}
-                    onDurationChange={setTripDuration}
+                  <WeatherSuggestion 
+                    destination={selectedDestination}
+                    onDateSelect={setSelectedDates}
                   />
                 </Card>
               </div>
-
-              <Card className="p-6">
-                <WeatherSuggestion 
-                  destination={selectedDestination}
-                  onDateSelect={setSelectedDates}
-                />
-              </Card>
 
               <div className="text-center">
                 <Button 
