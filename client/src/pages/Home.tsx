@@ -9,7 +9,10 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Sparkles, Users, Download } from "lucide-react";
+import { ArrowLeft, Sparkles, Users, Download, Loader2 } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { createTrip, generateItinerary, getTrip, getTripItineraries, type Trip, type Itinerary } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 import cultureImage from "@assets/generated_images/Cultural_heritage_destination_card_7c712f33.png";
 import adventureImage from "@assets/generated_images/Adventure_travel_destination_card_8cbc5aee.png";
 import relaxImage from "@assets/generated_images/Relaxation_spa_destination_card_c8d484c2.png";
@@ -22,55 +25,57 @@ export default function Home() {
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [tripDuration, setTripDuration] = useState(7);
   const [selectedDates, setSelectedDates] = useState("");
+  const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  const { toast } = useToast();
 
-  // Mock itinerary data - todo: remove mock functionality
-  const mockItinerary = [
-    {
-      day: 1,
-      date: "Sept 15, 2024",
-      totalCost: 280,
-      activities: [
-        {
-          id: "1",
-          time: "9:00 AM",
-          title: "City Walking Tour",
-          location: selectedDestination,
-          duration: "2 hours",
-          cost: 25,
-          type: "Culture",
-          description: "Guided tour of historic landmarks and local culture"
-        },
-        {
-          id: "2",
-          time: "2:00 PM", 
-          title: "Local Cuisine Experience",
-          location: "Traditional Restaurant",
-          duration: "1.5 hours",
-          cost: 45,
-          type: "Food",
-          description: "Authentic local dishes and cooking demonstration"
-        }
-      ]
+  // React Query hooks for API calls
+  const { data: currentTrip } = useQuery({
+    queryKey: ["trip", currentTripId],
+    queryFn: () => getTrip(currentTripId!),
+    enabled: !!currentTripId,
+  });
+
+  const { data: itineraries = [] } = useQuery({
+    queryKey: ["itineraries", currentTripId],
+    queryFn: () => getTripItineraries(currentTripId!),
+    enabled: !!currentTripId,
+  });
+
+  const createTripMutation = useMutation({
+    mutationFn: createTrip,
+    onSuccess: (trip) => {
+      setCurrentTripId(trip.id);
+      toast({
+        title: "Trip Created!",
+        description: `Your ${trip.destination} trip has been created.`,
+      });
     },
-    {
-      day: 2,
-      date: "Sept 16, 2024",
-      totalCost: 320,
-      activities: [
-        {
-          id: "3",
-          time: "10:00 AM",
-          title: selectedMoods.includes("adventure") ? "Outdoor Adventure" : 
-                 selectedMoods.includes("culture") ? "Museum Visit" : "Spa Session",
-          location: selectedDestination,
-          duration: "3 hours", 
-          cost: 75,
-          type: selectedMoods[0] || "Culture",
-          description: "Personalized activity based on your selected mood preferences"
-        }
-      ]
-    }
-  ];
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to create trip. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const generateItineraryMutation = useMutation({
+    mutationFn: generateItinerary,
+    onSuccess: () => {
+      setCurrentStep("itinerary");
+      toast({
+        title: "Itinerary Generated!",
+        description: "Your personalized AI itinerary is ready.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error", 
+        description: "Failed to generate itinerary. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const featuredDestinations = [
     {
@@ -119,19 +124,34 @@ export default function Home() {
     );
   };
 
-  const handleGenerateItinerary = () => {
-    setCurrentStep("itinerary");
-    console.log("Generating AI itinerary with preferences:", {
-      destination: selectedDestination,
-      moods: selectedMoods,
-      duration: tripDuration,
-      dates: selectedDates
-    });
+  const handleGenerateItinerary = async () => {
+    try {
+      // First create the trip
+      const tripData = {
+        destination: selectedDestination,
+        duration: tripDuration,
+        moods: selectedMoods,
+        startDate: selectedDates || undefined,
+        status: "planning",
+      };
+      
+      const trip = await createTripMutation.mutateAsync(tripData);
+      
+      // Then generate the AI itinerary
+      await generateItineraryMutation.mutateAsync(trip.id);
+    } catch (error) {
+      console.error("Error in trip planning flow:", error);
+    }
   };
 
   const handleBookNow = () => {
     console.log("Initiating booking process");
-    alert("🎉 Booking feature will be available soon! Your itinerary has been saved.");
+    if (currentTrip) {
+      toast({
+        title: "🎉 Booking Initiated!",
+        description: `Your ${currentTrip.destination} trip is ready for booking. Payment integration coming soon!`,
+      });
+    }
   };
 
   const handleBackToSearch = () => {
@@ -140,6 +160,7 @@ export default function Home() {
     setSelectedMoods([]);
     setTripDuration(7);
     setSelectedDates("");
+    setCurrentTripId(null);
   };
 
   return (
@@ -229,12 +250,21 @@ export default function Home() {
               <div className="text-center">
                 <Button 
                   onClick={handleGenerateItinerary}
-                  disabled={selectedMoods.length === 0}
+                  disabled={selectedMoods.length === 0 || createTripMutation.isPending || generateItineraryMutation.isPending}
                   className="px-8 py-3 text-lg"
                   data-testid="button-generate-itinerary"
                 >
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Generate AI Itinerary
+                  {(createTripMutation.isPending || generateItineraryMutation.isPending) ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Generating AI Itinerary...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-5 w-5 mr-2" />
+                      Generate AI Itinerary
+                    </>
+                  )}
                 </Button>
                 {selectedMoods.length === 0 && (
                   <p className="text-sm text-muted-foreground mt-2">
@@ -246,15 +276,27 @@ export default function Home() {
           </div>
         )}
 
-        {currentStep === "itinerary" && (
+        {currentStep === "itinerary" && currentTrip && (
           <div className="container px-6 py-12 max-w-6xl mx-auto">
-            <ItineraryDisplay
-              destination={selectedDestination}
-              days={mockItinerary}
-              totalBudget={1250}
-              onBookNow={handleBookNow}
-              onModifyItinerary={() => setCurrentStep("preferences")}
-            />
+            {itineraries.length > 0 ? (
+              <ItineraryDisplay
+                destination={currentTrip.destination}
+                days={itineraries.map(itinerary => ({
+                  day: itinerary.day,
+                  date: itinerary.date,
+                  activities: itinerary.activities,
+                  totalCost: parseFloat(itinerary.totalCost)
+                }))}
+                totalBudget={parseFloat(currentTrip.budget || "0")}
+                onBookNow={handleBookNow}
+                onModifyItinerary={() => setCurrentStep("preferences")}
+              />
+            ) : (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                <p className="text-lg">Loading your personalized itinerary...</p>
+              </div>
+            )}
 
             {/* Additional Features */}
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
