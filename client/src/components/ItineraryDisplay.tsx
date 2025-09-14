@@ -1,7 +1,9 @@
-import { MapPin, Clock, DollarSign, Users, Calendar } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Clock, DollarSign, Users, Calendar, Hotel } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { BookingIntegration } from "@/components/BookingIntegration";
 import { Separator } from "@/components/ui/separator";
 
 interface ItineraryActivity {
@@ -37,6 +39,19 @@ export function ItineraryDisplay({
   onBookNow, 
   onModifyItinerary 
 }: ItineraryDisplayProps) {
+  const [showBooking, setShowBooking] = useState(false);
+  
+  const handleHotelBookingSelect = (booking: any) => {
+    console.log('Hotel booking selected:', booking);
+    setShowBooking(false);
+    onBookNow();
+  };
+  
+  // Calculate check-in and check-out dates from the itinerary
+  const checkInDate = days.length > 0 ? days[0].date : new Date().toISOString().split('T')[0];
+  const checkOutDate = days.length > 0 ? 
+    new Date(new Date(days[days.length - 1].date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
+    new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -53,9 +68,13 @@ export function ItineraryDisplay({
         </div>
 
         <div className="flex gap-2">
+          <Button onClick={() => setShowBooking(true)} data-testid="button-book-hotels">
+            <Hotel className="h-4 w-4 mr-2" />
+            Book Hotels
+          </Button>
           <Button onClick={onBookNow} data-testid="button-book-now">
             <DollarSign className="h-4 w-4 mr-2" />
-            Book Now
+            Complete Booking
           </Button>
           <Button variant="outline" onClick={onModifyItinerary} data-testid="button-modify-itinerary">
             Modify Itinerary
@@ -64,6 +83,20 @@ export function ItineraryDisplay({
       </div>
 
       <Separator />
+
+      {/* Hotel Booking Section */}
+      {showBooking && (
+        <Card className="p-6">
+          <BookingIntegration
+            destination={destination}
+            checkIn={checkInDate}
+            checkOut={checkOutDate}
+            guests={2}
+            budget={Math.round(totalBudget * 0.4)}
+            onBookingSelect={handleHotelBookingSelect}
+          />
+        </Card>
+      )}
 
       {/* Days Timeline */}
       <div className="space-y-6">
