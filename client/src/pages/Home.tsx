@@ -1,0 +1,299 @@
+import { useState } from "react";
+import { HeroSection } from "@/components/HeroSection";
+import { MoodSelector } from "@/components/MoodSelector";
+import { TripDurationPicker } from "@/components/TripDurationPicker"; 
+import { WeatherSuggestion } from "@/components/WeatherSuggestion";
+import { ItineraryDisplay } from "@/components/ItineraryDisplay";
+import { DestinationCard } from "@/components/DestinationCard";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Sparkles, Users, Download } from "lucide-react";
+import cultureImage from "@assets/generated_images/Cultural_heritage_destination_card_7c712f33.png";
+import adventureImage from "@assets/generated_images/Adventure_travel_destination_card_8cbc5aee.png";
+import relaxImage from "@assets/generated_images/Relaxation_spa_destination_card_c8d484c2.png";
+
+type PlanningStep = "hero" | "preferences" | "suggestions" | "itinerary";
+
+export default function Home() {
+  const [currentStep, setCurrentStep] = useState<PlanningStep>("hero");
+  const [selectedDestination, setSelectedDestination] = useState("");
+  const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
+  const [tripDuration, setTripDuration] = useState(7);
+  const [selectedDates, setSelectedDates] = useState("");
+
+  // Mock itinerary data - todo: remove mock functionality
+  const mockItinerary = [
+    {
+      day: 1,
+      date: "Sept 15, 2024",
+      totalCost: 280,
+      activities: [
+        {
+          id: "1",
+          time: "9:00 AM",
+          title: "City Walking Tour",
+          location: selectedDestination,
+          duration: "2 hours",
+          cost: 25,
+          type: "Culture",
+          description: "Guided tour of historic landmarks and local culture"
+        },
+        {
+          id: "2",
+          time: "2:00 PM", 
+          title: "Local Cuisine Experience",
+          location: "Traditional Restaurant",
+          duration: "1.5 hours",
+          cost: 45,
+          type: "Food",
+          description: "Authentic local dishes and cooking demonstration"
+        }
+      ]
+    },
+    {
+      day: 2,
+      date: "Sept 16, 2024",
+      totalCost: 320,
+      activities: [
+        {
+          id: "3",
+          time: "10:00 AM",
+          title: selectedMoods.includes("adventure") ? "Outdoor Adventure" : 
+                 selectedMoods.includes("culture") ? "Museum Visit" : "Spa Session",
+          location: selectedDestination,
+          duration: "3 hours", 
+          cost: 75,
+          type: selectedMoods[0] || "Culture",
+          description: "Personalized activity based on your selected mood preferences"
+        }
+      ]
+    }
+  ];
+
+  const featuredDestinations = [
+    {
+      id: "culture",
+      name: "Cultural Heritage",
+      image: cultureImage,
+      description: "Explore ancient temples and traditional architecture",
+      rating: 4.8,
+      duration: "5-7 days",
+      price: 850,
+      mood: "Culture"
+    },
+    {
+      id: "adventure",
+      name: "Mountain Adventure", 
+      image: adventureImage,
+      description: "Thrilling outdoor activities and scenic trekking",
+      rating: 4.9,
+      duration: "7-10 days",
+      price: 1200,
+      mood: "Adventure"
+    },
+    {
+      id: "relax",
+      name: "Wellness Retreat",
+      image: relaxImage,
+      description: "Peaceful spa treatments and meditation experiences",
+      rating: 4.7,
+      duration: "4-6 days", 
+      price: 950,
+      mood: "Relax"
+    }
+  ];
+
+  const handleDestinationSelect = (destination: string) => {
+    setSelectedDestination(destination);
+    setCurrentStep("preferences");
+    console.log("Starting planning for:", destination);
+  };
+
+  const handleMoodToggle = (moodId: string) => {
+    setSelectedMoods(prev => 
+      prev.includes(moodId) 
+        ? prev.filter(id => id !== moodId)
+        : [...prev, moodId]
+    );
+  };
+
+  const handleGenerateItinerary = () => {
+    setCurrentStep("itinerary");
+    console.log("Generating AI itinerary with preferences:", {
+      destination: selectedDestination,
+      moods: selectedMoods,
+      duration: tripDuration,
+      dates: selectedDates
+    });
+  };
+
+  const handleBookNow = () => {
+    console.log("Initiating booking process");
+    alert("🎉 Booking feature will be available soon! Your itinerary has been saved.");
+  };
+
+  const handleBackToSearch = () => {
+    setCurrentStep("hero");
+    setSelectedDestination("");
+    setSelectedMoods([]);
+    setTripDuration(7);
+    setSelectedDates("");
+  };
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-16 items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">TripCraft</span>
+            <Badge variant="secondary" className="text-xs">AI-Powered</Badge>
+          </div>
+          
+          <div className="flex items-center gap-4">
+            {currentStep !== "hero" && (
+              <Button 
+                variant="ghost" 
+                onClick={handleBackToSearch}
+                data-testid="button-back-to-search"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Search
+              </Button>
+            )}
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main>
+        {currentStep === "hero" && (
+          <div className="space-y-12">
+            <HeroSection onGetStarted={handleDestinationSelect} />
+            
+            {/* Featured Destinations */}
+            <section className="container px-6 py-12">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold mb-4">Popular Experiences</h2>
+                <p className="text-muted-foreground">Curated trips based on different travel moods</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                {featuredDestinations.map(dest => (
+                  <DestinationCard
+                    key={dest.id}
+                    {...dest}
+                    onClick={() => handleDestinationSelect(dest.name)}
+                  />
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {currentStep === "preferences" && (
+          <div className="container px-6 py-12 max-w-4xl mx-auto">
+            <div className="space-y-8">
+              <div className="text-center">
+                <h1 className="text-3xl font-bold mb-2">Customize Your {selectedDestination} Trip</h1>
+                <p className="text-muted-foreground">Tell us your preferences for a personalized experience</p>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card className="p-6">
+                  <MoodSelector 
+                    selectedMoods={selectedMoods} 
+                    onMoodToggle={handleMoodToggle} 
+                  />
+                </Card>
+
+                <Card className="p-6">
+                  <TripDurationPicker 
+                    duration={tripDuration}
+                    onDurationChange={setTripDuration}
+                  />
+                </Card>
+              </div>
+
+              <Card className="p-6">
+                <WeatherSuggestion 
+                  destination={selectedDestination}
+                  onDateSelect={setSelectedDates}
+                />
+              </Card>
+
+              <div className="text-center">
+                <Button 
+                  onClick={handleGenerateItinerary}
+                  disabled={selectedMoods.length === 0}
+                  className="px-8 py-3 text-lg"
+                  data-testid="button-generate-itinerary"
+                >
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Generate AI Itinerary
+                </Button>
+                {selectedMoods.length === 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Please select at least one travel mood to continue
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {currentStep === "itinerary" && (
+          <div className="container px-6 py-12 max-w-6xl mx-auto">
+            <ItineraryDisplay
+              destination={selectedDestination}
+              days={mockItinerary}
+              totalBudget={1250}
+              onBookNow={handleBookNow}
+              onModifyItinerary={() => setCurrentStep("preferences")}
+            />
+
+            {/* Additional Features */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 text-center hover-elevate">
+                <Users className="h-8 w-8 mx-auto mb-3 text-blue-500" />
+                <h3 className="font-semibold mb-2">Collaborative Planning</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Invite friends and plan together
+                </p>
+                <Button variant="outline" size="sm" onClick={() => console.log("Group planning")}>
+                  Coming Soon
+                </Button>
+              </Card>
+
+              <Card className="p-6 text-center hover-elevate">
+                <Download className="h-8 w-8 mx-auto mb-3 text-green-500" />
+                <h3 className="font-semibold mb-2">Offline Access</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Download for offline use
+                </p>
+                <Button variant="outline" size="sm" onClick={() => console.log("Offline download")}>
+                  Download
+                </Button>
+              </Card>
+
+              <Card className="p-6 text-center hover-elevate">
+                <Sparkles className="h-8 w-8 mx-auto mb-3 text-purple-500" />
+                <h3 className="font-semibold mb-2">AI Plan B</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Real-time adaptive suggestions
+                </p>
+                <Button variant="outline" size="sm" onClick={() => console.log("AI Plan B")}>
+                  Enable
+                </Button>
+              </Card>
+            </div>
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
