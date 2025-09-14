@@ -1,7 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
 
 // Trip planner AI service using Gemini
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY || "" });
 
 export interface TripPreferences {
   destination: string;
