@@ -1,21 +1,26 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Globe } from "lucide-react";
 import { DestinationSearch } from "./DestinationSearch";
 import heroImage from "@assets/generated_images/Travel_destination_hero_image_34af79f1.png";
 
+// --- Add this import for your modal (adjust path as needed) ---
+import { MapModal } from "./MapModal";
+
 interface HeroSectionProps {
   onGetStarted: (destination: string) => void;
 }
 
 export function HeroSection({ onGetStarted }: HeroSectionProps) {
+  const [mapOpen, setMapOpen] = useState(false);
   return (
     <div className="relative min-h-[80vh] flex items-center justify-center">
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0">
-        <img 
-          src={heroImage} 
-          alt="Beautiful travel destination" 
+        <img
+          src={heroImage}
+          alt="Beautiful travel destination"
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
@@ -41,8 +46,8 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-200 max-w-2xl mx-auto">
-              Create personalized itineraries based on your mood, budget, and real-time conditions. 
-              Book everything with one click.
+              Create personalized itineraries based on your mood, budget, and
+              real-time conditions. Book everything with one click.
             </p>
           </div>
 
@@ -65,12 +70,26 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
           {/* Search */}
           <div className="space-y-4">
             <DestinationSearch onDestinationSelect={onGetStarted} />
+            <Button
+              variant="outline"
+              className="w-full md:w-auto"
+              onClick={() => setMapOpen(true)}
+              data-testid="button-view-map"
+            >
+              View Map
+            </Button>
             <p className="text-sm text-gray-300">
               Start planning your dream trip in seconds
             </p>
           </div>
         </div>
       </div>
+
+      <MapModal
+        open={mapOpen}
+        onClose={() => setMapOpen(false)}
+        onPlaceSelect={(place) => onGetStarted(place.name)}
+      />
     </div>
   );
 }

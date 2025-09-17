@@ -6,6 +6,7 @@ import { WeatherSuggestion } from "@/components/WeatherSuggestion";
 import { BudgetEstimator } from "@/components/BudgetEstimator";
 import { ItineraryDisplay } from "@/components/ItineraryDisplay";
 import { DestinationCard } from "@/components/DestinationCard";
+import { DestinationSearch } from "@/components/DestinationSearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -14,9 +15,12 @@ import { ArrowLeft, Sparkles, Users, Download, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { createTrip, generateItinerary, getTrip, getTripItineraries, type Trip, type Itinerary } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
-import cultureImage from "@assets/generated_images/Cultural_heritage_destination_card_7c712f33.png";
-import adventureImage from "@assets/generated_images/Adventure_travel_destination_card_8cbc5aee.png";
-import relaxImage from "@assets/generated_images/Relaxation_spa_destination_card_c8d484c2.png";
+import hampi_heritage from "@assets/generated_images/hampi_heritage.png";
+import tamilnadu from "@assets/generated_images/tamilnadu.png";
+import kerala_backwaters from "@assets/generated_images/kerala_backwaters.png";
+import coorg_adventure from "@assets/generated_images/coorg_adventure.png";
+import pondicherry from "@assets/generated_images/pondicherry.png";
+import andaman_beach from "@assets/generated_images/andaman_beach.png";
 
 type PlanningStep = "hero" | "preferences" | "suggestions" | "itinerary";
 
@@ -28,6 +32,7 @@ export default function Home() {
   const [selectedDates, setSelectedDates] = useState("");
   const [estimatedBudget, setEstimatedBudget] = useState(0);
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
+  const [mapOpen, setMapOpen] = useState(false);
   const { toast } = useToast();
 
   // React Query hooks for API calls
@@ -79,38 +84,70 @@ export default function Home() {
     },
   });
 
-  const featuredDestinations = [
-    {
-      id: "culture",
-      name: "Cultural Heritage",
-      image: cultureImage,
-      description: "Explore ancient temples and traditional architecture",
-      rating: 4.8,
-      duration: "5-7 days",
-      price: 850,
-      mood: "Culture"
-    },
-    {
-      id: "adventure",
-      name: "Mountain Adventure", 
-      image: adventureImage,
-      description: "Thrilling outdoor activities and scenic trekking",
-      rating: 4.9,
-      duration: "7-10 days",
-      price: 1200,
-      mood: "Adventure"
-    },
-    {
-      id: "relax",
-      name: "Wellness Retreat",
-      image: relaxImage,
-      description: "Peaceful spa treatments and meditation experiences",
-      rating: 4.7,
-      duration: "4-6 days", 
-      price: 950,
-      mood: "Relax"
-    }
-  ];
+const featuredDestinations = [
+  {
+    id: "tn_culture",
+    name: "Tamil Nadu Temples",
+    image: tamilnadu, // replace with actual image path
+    description: "Marvel at the Dravidian architecture of Meenakshi Temple, Brihadeeswarar Temple, and the Shore Temple at Mahabalipuram.",
+    rating: 4.8,
+    duration: "5-7 days",
+    price: 65000,
+    mood: "Culture"
+  },
+  {
+    id: "kerala_backwaters",
+    name: "Kerala Backwaters",
+    image: kerala_backwaters,
+    description: "Cruise through Alleppey and Kumarakom on a traditional houseboat, enjoy Ayurvedic massages and serene sunsets.",
+    rating: 4.7,
+    duration: "4-6 days",
+    price: 72000,
+    mood: "Relax"
+  },
+  {
+    id: "coorg_adventure",
+    name: "Coorg & Wayanad Adventure",
+    image: coorg_adventure,
+    description: "Trek the lush coffee hills, experience waterfalls, wildlife safaris, and the thrill of river rafting in Karnataka & Kerala.",
+    rating: 4.9,
+    duration: "6-8 days",
+    price: 78000,
+    mood: "Adventure"
+  },
+  {
+    id: "pondy_romantic",
+    name: "Pondicherry – French Riviera of the East",
+    image: pondicherry,
+    description: "Walk along French-style boulevards, relax on quiet beaches, and enjoy a mix of Indian and French cuisine.",
+    rating: 4.6,
+    duration: "3-5 days",
+    price: 55000,
+    mood: "Romantic"
+  },
+  {
+    id: "andaman_beach",
+    name: "Andaman Islands",
+    image: andaman_beach,
+    description: "Pristine white sand beaches, scuba diving, snorkeling, and breathtaking sunsets at Radhanagar Beach.",
+    rating: 4.9,
+    duration: "5-7 days",
+    price: 95000,
+    mood: "Beach & Coastal"
+  },
+  {
+    id: "hampi_heritage",
+    name: "Hampi – UNESCO Heritage",
+    image: hampi_heritage,
+    description: "Explore the ruins of the Vijayanagara Empire, ancient temples, and boulder-strewn landscapes.",
+    rating: 4.7,
+    duration: "4-6 days",
+    price: 60000,
+    mood: "Heritage"
+  }
+];
+
+
 
   const handleDestinationSelect = (destination: string) => {
     setSelectedDestination(destination);
@@ -171,14 +208,14 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-6">
+  <div className="w-full flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">TripCraft</span>
             <Badge variant="secondary" className="text-xs">AI-Powered</Badge>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-right gap-4">
             {currentStep !== "hero" && (
               <Button 
                 variant="ghost" 
@@ -199,14 +236,12 @@ export default function Home() {
         {currentStep === "hero" && (
           <div className="space-y-12">
             <HeroSection onGetStarted={handleDestinationSelect} />
-            
             {/* Featured Destinations */}
-            <section className="container px-6 py-12">
+            <section className="w-full ontainer px-6 py-12">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold mb-4">Popular Experiences</h2>
                 <p className="text-muted-foreground">Curated trips based on different travel moods</p>
               </div>
-              
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
                 {featuredDestinations.map(dest => (
                   <DestinationCard
@@ -221,7 +256,7 @@ export default function Home() {
         )}
 
         {currentStep === "preferences" && (
-          <div className="container px-6 py-12 max-w-4xl mx-auto">
+          <div className="container px-6 py-12 max-w-6xl mx-auto">
             <div className="space-y-8">
               <div className="text-center">
                 <h1 className="text-3xl font-bold mb-2">Customize Your {selectedDestination} Trip</h1>
@@ -353,4 +388,4 @@ export default function Home() {
       </main>
     </div>
   );
-}
+};

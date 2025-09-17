@@ -51,53 +51,55 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
   };
 
   return (
-    <div className="relative w-full max-w-md">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          type="text"
-          placeholder="Where do you want to go?"
-          value={searchQuery}
-          onChange={(e) => {
-            setSearchQuery(e.target.value);
-            setShowSuggestions(e.target.value.length > 0);
-          }}
-          onFocus={() => setShowSuggestions(searchQuery.length > 0)}
-          className="pl-10 pr-4"
-          data-testid="input-destination-search"
-        />
-      </div>
-
-      {showSuggestions && (isLoading || suggestions.length > 0) && (
-        <Card className="absolute z-50 w-full mt-1 p-2 max-h-64 overflow-y-auto">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-4">
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              <span className="text-sm text-muted-foreground">Searching destinations...</span>
-            </div>
-          ) : (
-            suggestions.map((suggestion: any, index: number) => (
-              <Button
-                key={index}
-                variant="ghost"
-                className="w-full justify-start p-2 h-auto"
-                onClick={() => handleDestinationClick(suggestion)}
-                data-testid={`button-destination-${index}`}
-              >
-                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                <div className="text-left">
-                  <div className="font-medium">{suggestion.name}</div>
-                  {suggestion.fullName !== suggestion.name && (
-                    <div className="text-xs text-muted-foreground truncate">
-                      {suggestion.fullName}
-                    </div>
-                  )}
+    <div className="flex justify-center items-center w-full">
+      <div className="relative w-full max-w-md">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            type="text"
+            placeholder="Where do you want to go?"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setShowSuggestions(e.target.value.length > 0);
+            }}
+            onFocus={() => setShowSuggestions(searchQuery.length > 0)}
+            className="pl-10 pr-4"
+            data-testid="input-destination-search"
+            autoComplete="off"
+          />
+          {showSuggestions && (isLoading || suggestions.length > 0) && (
+            <Card className="absolute left-0 right-0 z-50 w-full mt-1 p-2 max-h-64 overflow-y-auto bg-background shadow-lg border">
+              {isLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-sm text-muted-foreground">Searching destinations...</span>
                 </div>
-              </Button>
-            ))
+              ) : (
+                suggestions.map((suggestion: any, index: number) => (
+                  <Button
+                    key={index}
+                    variant="ghost"
+                    className="w-full justify-start p-2 h-auto"
+                    onClick={() => handleDestinationClick(suggestion)}
+                    data-testid={`button-destination-${index}`}
+                  >
+                    <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                    <div className="text-left">
+                      <div className="font-medium">{suggestion.name}</div>
+                      {suggestion.fullName !== suggestion.name && (
+                        <div className="text-xs text-muted-foreground truncate">
+                          {suggestion.fullName}
+                        </div>
+                      )}
+                    </div>
+                  </Button>
+                ))
+              )}
+            </Card>
           )}
-        </Card>
-      )}
+        </div>
+        </div>
     </div>
   );
 }

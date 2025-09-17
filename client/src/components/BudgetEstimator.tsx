@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DollarSign, Info, Calculator, TrendingUp } from "lucide-react";
+import { IndianRupee, Info, Calculator, TrendingUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -116,7 +116,7 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <DollarSign className="h-5 w-5 text-green-500" />
+        <IndianRupee className="h-5 w-5 text-green-500" />
         <h3 className="text-lg font-semibold">Dynamic Budget Estimator</h3>
       </div>
       
@@ -143,7 +143,7 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
               </div>
               <h4 className="font-medium">{config.label}</h4>
               <p className="text-sm text-muted-foreground">
-                {key === "custom" ? "Set your own" : `$${config.min}-${config.max}/day`}
+                {key === "custom" ? "Set your own" : `₹${config.min}-${config.max}/day`}
               </p>
               {budgetRange === key && (
                 <Badge variant="default" className="mt-2 text-xs">
@@ -162,7 +162,7 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
             <div className="flex items-center justify-between">
               <h4 className="font-medium">Custom Budget</h4>
               <div className="text-lg font-bold text-primary">
-                ${customBudget * duration}
+                ₹{customBudget * duration}
               </div>
             </div>
             <div className="space-y-2">
@@ -175,8 +175,8 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
                 className="w-full"
               />
               <div className="flex justify-between text-sm text-muted-foreground">
-                <span>$50/day</span>
-                <span>$2000/day</span>
+                <span>₹50/day</span>
+                <span>₹2000/day</span>
               </div>
             </div>
           </div>
@@ -192,7 +192,7 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-green-500" />
                 <span className="text-lg font-bold text-primary">
-                  ${Math.round(breakdown.total)}
+                  ₹{Math.round(breakdown.total)}
                 </span>
               </div>
             </div>
@@ -201,25 +201,25 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
               <div>
                 <div className="text-lg font-bold text-blue-600">
-                  ${Math.round(breakdown.accommodation)}
+                  ₹{Math.round(breakdown.accommodation)}
                 </div>
                 <div className="text-xs text-muted-foreground">Accommodation</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-green-600">
-                  ${Math.round(breakdown.activities)}
+                  ₹{Math.round(breakdown.activities)}
                 </div>
                 <div className="text-xs text-muted-foreground">Activities</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-orange-600">
-                  ${Math.round(breakdown.food)}
+                  ₹{Math.round(breakdown.food)}
                 </div>
                 <div className="text-xs text-muted-foreground">Food</div>
               </div>
               <div>
                 <div className="text-lg font-bold text-purple-600">
-                  ${Math.round(breakdown.transport)}
+                  ₹{Math.round(breakdown.transport)}
                 </div>
                 <div className="text-xs text-muted-foreground">Transport</div>
               </div>
@@ -234,34 +234,34 @@ export function BudgetEstimator({ destination, duration, moods, onBudgetChange }
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
                 <div className="flex justify-between">
                   <span>Local Transport:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.localTransport)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.localTransport)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Tips & Service:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.tips)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.tips)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Fees & Visas:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.fees)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.fees)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>SIM/Data:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.simCard)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.simCard)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Insurance:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.insurance)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.insurance)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Emergency Buffer:</span>
-                  <span className="font-medium">${Math.round(breakdown.hiddenCosts.emergency)}</span>
+                  <span className="font-medium">₹{Math.round(breakdown.hiddenCosts.emergency)}</span>
                 </div>
               </div>
               <div className="mt-3 pt-3 border-t">
                 <div className="flex justify-between font-semibold">
                   <span>Total Hidden Costs:</span>
                   <span className="text-amber-600">
-                    +${Math.round(Object.values(breakdown.hiddenCosts).reduce((sum, cost) => sum + cost, 0))}
+                    +₹{Math.round(Object.values(breakdown.hiddenCosts).reduce((sum, cost) => sum + cost, 0))}
                   </span>
                 </div>
               </div>

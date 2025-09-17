@@ -62,7 +62,7 @@ export function ItineraryDisplay({
             <p className="text-muted-foreground">AI-crafted journey for {days.length} days</p>
           </div>
           <div className="text-right">
-            <div className="text-2xl font-bold text-primary">${totalBudget}</div>
+            <div className="text-2xl font-bold text-primary">₹{totalBudget}</div>
             <p className="text-sm text-muted-foreground">Total Budget</p>
           </div>
         </div>
@@ -114,7 +114,7 @@ export function ItineraryDisplay({
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="font-semibold">${day.totalCost}</div>
+                  <div className="font-semibold">₹{day.totalCost}</div>
                   <p className="text-xs text-muted-foreground">Daily budget</p>
                 </div>
               </div>
