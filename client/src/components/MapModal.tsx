@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 interface MapModalProps {
   readonly open: boolean;
@@ -9,11 +10,11 @@ interface MapModalProps {
 
 export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [selectedPlace, setSelectedPlace] = useState<{ name: string; lat: number; lng: number } | null>(null);
   const [marker, setMarker] = useState<any>(null);
   const mapInstanceRef = useRef<any>(null);
 
-  // Helper to clear marker and selected place
   const clearMapState = () => {
     if (marker) marker.setMap(null);
     setMarker(null);
@@ -26,13 +27,15 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
     const initializeMap = () => {
       if (!mapRef.current) return;
       const google = (window as any).google;
+
+      // Create map
       const mapInstance = new google.maps.Map(mapRef.current, {
         center: { lat: 20.5937, lng: 78.9629 },
         zoom: 5,
       });
       mapInstanceRef.current = mapInstance;
 
-      // Create custom close button as Google Maps control
+      // Custom close button
       const closeButton = document.createElement("button");
       closeButton.innerHTML = "✕";
       closeButton.className =
@@ -42,9 +45,46 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
         clearMapState();
         if (typeof onClose === "function") onClose();
       };
-
-      // Add to TOP_RIGHT so it sits with fullscreen/zoom controls
       mapInstance.controls[google.maps.ControlPosition.TOP_RIGHT].push(closeButton);
+
+      // Search box
+      if (inputRef.current) {
+        const searchBox = new google.maps.places.SearchBox(inputRef.current);
+        mapInstance.controls[google.maps.ControlPosition.TOP_LEFT].push(inputRef.current);
+
+        // Bias results towards current map’s viewport
+        mapInstance.addListener("bounds_changed", () => {
+          searchBox.setBounds(mapInstance.getBounds());
+        });
+
+        // When user selects a place
+        searchBox.addListener("places_changed", () => {
+          const places = searchBox.getPlaces();
+          if (!places || places.length === 0) return;
+
+          const place = places[0];
+          if (!place.geometry) return;
+
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+
+          // Clear old marker
+          if (marker) marker.setMap(null);
+
+          // Add new marker
+          const newMarker = new google.maps.Marker({
+            map: mapInstance,
+            position: { lat, lng },
+          });
+          setMarker(newMarker);
+
+          // Center and zoom map
+          mapInstance.panTo({ lat, lng });
+          mapInstance.setZoom(14);
+
+          setSelectedPlace({ name: place.formatted_address || place.name, lat, lng });
+        });
+      }
 
       // Map click listener
       mapInstance.addListener("click", handleMapClick(mapInstance));
@@ -52,7 +92,7 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
 
     if (!(window as any).google) {
       const script = document.createElement("script");
-      script.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBHRMkF3wgiqxDI1AGJwQzd5DvouziN2rg&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
       script.async = true;
       script.onload = initializeMap;
       document.body.appendChild(script);
@@ -89,7 +129,16 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
   return open ? (
     <div className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center">
       <div className="relative w-full h-full md:w-4/5 md:h-4/5 bg-white rounded-lg shadow-lg flex flex-col overflow-hidden">
+        {/* Search input (hidden, but rendered for Google Maps control) */}
+        <input
+          ref={inputRef}
+          type="text"
+          placeholder="Search for a place"
+          className="border p-2 rounded-md shadow w-64 absolute top-2 left-2 z-10 bg-white"
+        />
+
         <div ref={mapRef} className="flex-1 w-full h-full" />
+
         {/* Place selection info and confirm */}
         {selectedPlace && (
           <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg px-4 py-3 flex flex-col items-center gap-2 w-[90vw] max-w-md border">
