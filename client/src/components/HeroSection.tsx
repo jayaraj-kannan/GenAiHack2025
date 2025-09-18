@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Zap, Globe } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Sparkles, Zap, Globe, User, Users } from "lucide-react";
 import { DestinationSearch } from "./DestinationSearch";
 import heroImage from "@assets/generated_images/Travel_destination_hero_image_34af79f1.png";
 
@@ -10,10 +12,21 @@ import { MapModal } from "./MapModal";
 
 interface HeroSectionProps {
   onGetStarted: (destination: string) => void;
+  tripType: "solo" | "group";
+  setTripType: (val: "solo" | "group") => void;
+  groupCount: number;
+  setGroupCount: (val: number) => void;
 }
 
-export function HeroSection({ onGetStarted }: HeroSectionProps) {
+export function HeroSection({
+  onGetStarted,
+  tripType,
+  setTripType,
+  groupCount,
+  setGroupCount,
+}: HeroSectionProps) {
   const [mapOpen, setMapOpen] = useState(false);
+
   return (
     <div className="relative min-h-[80vh] flex items-center justify-center">
       {/* Background Image with Overlay */}
@@ -65,6 +78,49 @@ export function HeroSection({ onGetStarted }: HeroSectionProps) {
               <Sparkles className="h-4 w-4 text-purple-400" />
               One-Click Booking
             </div>
+          </div>
+
+          {/* Trip Type Toggle + Group Input */}
+          <div className="flex justify-center gap-4">
+            <ToggleGroup
+              type="single"
+              value={tripType}
+              onValueChange={(val: "solo" | "group") => val && setTripType(val)}
+              className="flex gap-4"
+            >
+              <ToggleGroupItem
+                value="solo"
+                aria-label="Solo Trip"
+                className="data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+              >
+                <User className="h-4 w-4 mr-2" />
+                Solo
+              </ToggleGroupItem>
+
+              {/* Group Button + Input Inline */}
+              <div className="flex items-center gap-2">
+                <ToggleGroupItem
+                  value="group"
+                  aria-label="Group Trip"
+                  className="data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Group
+                </ToggleGroupItem>
+
+                {tripType === "group" && (
+                  <Input
+                    type="number"
+                    min={2}
+                    max={20}
+                    value={groupCount}
+                    onChange={(e) => setGroupCount(Number(e.target.value))}
+                    className="w-20 text-center"
+                    placeholder="Count"
+                  />
+                )}
+              </div>
+            </ToggleGroup>
           </div>
 
           {/* Search */}

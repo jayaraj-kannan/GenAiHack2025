@@ -44,10 +44,10 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
   const suggestions = searchResults?.suggestions || [];
 
   const handleDestinationClick = (suggestion: any) => {
-    setSearchQuery(suggestion.name);
+    setSearchQuery(suggestion);
     setShowSuggestions(false);
-    onDestinationSelect(suggestion.name);
-    console.log("Destination selected:", suggestion.name);
+    onDestinationSelect(suggestion);
+    console.log("Destination selected:", suggestion);
   };
 
   return (
@@ -81,7 +81,7 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
                     key={index}
                     variant="ghost"
                     className="w-full justify-start p-2 h-auto"
-                    onClick={() => handleDestinationClick(suggestion)}
+                    onClick={() => handleDestinationClick(suggestion.name)}
                     data-testid={`button-destination-${index}`}
                   >
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />

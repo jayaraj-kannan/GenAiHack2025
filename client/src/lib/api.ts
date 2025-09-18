@@ -5,6 +5,7 @@ export interface CreateTripRequest {
   destination: string;
   duration: number;
   moods: string[];
+  travelMode?: string;
   budget?: string;
   startDate?: string;
   endDate?: string;

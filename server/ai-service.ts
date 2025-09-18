@@ -1,5 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
-
+import dotenv from "dotenv";
+dotenv.config();
+console.log("GOOGLE_AI_API_KEY:", process.env.GOOGLE_AI_API_KEY);
 // Trip planner AI service using Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY || "" });
 
@@ -7,6 +9,7 @@ export interface TripPreferences {
   destination: string;
   duration: number; // days
   moods: string[]; // relax, adventure, culture, discovery
+  travelMode?: string;
   budget?: number;
   startDate?: string;
   endDate?: string;
@@ -59,13 +62,15 @@ Requirements:
 - Provide specific locations and descriptions
 - Ensure activities are logically sequenced by time and location
 - Include realistic travel times between activities
+- Include the unique places based on the travel mode: ${preferences.travelMode || "flexible"}
 - Balance indoor/outdoor activities based on typical weather patterns`;
 
-    const prompt = `Create a detailed ${preferences.duration}-day itinerary for ${preferences.destination}.
+    const prompt = `Create a detailed ${preferences.duration}-day itinerary for ${preferences.destination} with travel mode ${preferences.travelMode || "flexible"}.
 
 Travel Preferences:
 - Duration: ${preferences.duration} days
 - Mood preferences: ${preferences.moods.join(", ")}
+- Travel mode preferences: ${preferences.travelMode || "flexible"}
 - Budget range: ${preferences.budget ? `$${preferences.budget}` : "moderate budget"}
 - Travel dates: ${preferences.startDate || "flexible dates"}
 
@@ -134,7 +139,7 @@ Format the response as JSON with this structure:
         }
       });
     });
-
+    console.log("Generated Itinerary:", itinerary);
     return itinerary;
 
   } catch (error) {

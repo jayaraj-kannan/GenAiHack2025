@@ -54,7 +54,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!trip) {
         return res.status(404).json({ error: "Trip not found" });
       }
-
+      console.log("Generating itinerary for trip:", trip);
       // Generate AI itinerary
       const aiItinerary = await generatePersonalizedItinerary({
         destination: trip.destination,
@@ -64,7 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         startDate: trip.startDate || undefined,
         endDate: trip.endDate || undefined,
       });
-
+ console.log("Save generated");
       // Save generated itinerary to storage
       const savedItineraries = [];
       for (const day of aiItinerary.days) {
@@ -90,6 +90,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherOptimized: aiItinerary.weatherOptimized,
         moodMatched: aiItinerary.moodMatched,
       });
+      console.log("Itinerary generated for trip:", savedItineraries);
     } catch (error) {
       console.error("Error generating itinerary:", error);
       res.status(500).json({ error: "Failed to generate itinerary" });
@@ -218,6 +219,7 @@ app.get("/api/destinations/search", async (req, res) => {
         }
         
         const weatherData = await weatherResponse.json();
+        console.log("Weather data:", weatherData);
         const forecast = weatherData.forecast?.forecastday || [];
         
         // Generate 3-day windows with AI scoring algorithm
