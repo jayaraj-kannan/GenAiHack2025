@@ -10,7 +10,9 @@ interface DestinationSearchProps {
   onDestinationSelect: (destination: string) => void;
 }
 
-export function DestinationSearch({ onDestinationSelect }: DestinationSearchProps) {
+export function DestinationSearch({
+  onDestinationSelect,
+}: DestinationSearchProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -21,11 +23,11 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
-    
+
     debounceTimer.current = setTimeout(() => {
       setDebouncedQuery(searchQuery);
     }, 300);
-    
+
     return () => {
       if (debounceTimer.current) {
         clearTimeout(debounceTimer.current);
@@ -64,16 +66,25 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
               setShowSuggestions(e.target.value.length > 0);
             }}
             onFocus={() => setShowSuggestions(searchQuery.length > 0)}
-            className="pl-10 pr-4"
+            className="
+    pl-10 pr-4 
+    rounded-lg border 
+    bg-white text-black 
+    dark:bg-gray-800 dark:text-white 
+    placeholder-gray-400 dark:placeholder-gray-500
+  "
             data-testid="input-destination-search"
             autoComplete="off"
           />
+
           {showSuggestions && (isLoading || suggestions.length > 0) && (
             <Card className="absolute left-0 right-0 z-50 w-full mt-1 p-2 max-h-64 overflow-y-auto bg-background shadow-lg border">
               {isLoading ? (
                 <div className="flex items-center justify-center py-4">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span className="text-sm text-muted-foreground">Searching destinations...</span>
+                  <span className="text-sm text-muted-foreground">
+                    Searching destinations...
+                  </span>
                 </div>
               ) : (
                 suggestions.map((suggestion: any, index: number) => (
@@ -99,7 +110,7 @@ export function DestinationSearch({ onDestinationSelect }: DestinationSearchProp
             </Card>
           )}
         </div>
-        </div>
+      </div>
     </div>
   );
 }

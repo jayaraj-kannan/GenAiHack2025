@@ -1,5 +1,14 @@
 import { apiRequest } from "./queryClient";
-
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  UserCredential ,
+  GoogleAuthProvider,
+  signInWithPopup
+} from "firebase/auth";
+import { auth } from "./firebase";
+import { useEffect, useState } from "react"
+import { onAuthStateChanged, User } from "firebase/auth"
 // Trip API endpoints
 export interface CreateTripRequest {
   destination: string;
@@ -54,7 +63,89 @@ export interface WeatherSuggestion {
   score: number;
   description: string;
 }
+export type AuthUser = {
+  name: string
+  email: string
+  avatar?: string
+}
+// firebase code
+// Register new user
+export async function register(email: string, password: string): Promise<UserCredential | void> {
+  try {
+    const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+    console.log("User registered:", userCredential.user);
+    return userCredential;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error:", error.message);
+    } else {
+      console.error("Unexpected error:", error);
+    }
+  }
+}
 
+// Login user
+export async function login(email: string, password: string): Promise<UserCredential | void> {
+  try {
+    const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
+    console.log("User logged in:", userCredential.user);
+    return userCredential;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error:", error.message);
+    } else {
+      console.error("Unexpected error:", error);
+    }
+  }
+}
+// Google Sign-In
+export async function signInWithGoogle(): Promise<UserCredential | void> {
+  const provider = new GoogleAuthProvider();
+  try {
+    const result: UserCredential = await signInWithPopup(auth, provider);
+    console.log("Google user:", result.user);
+    return result;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      console.error("Error:", error.message);
+    } else {
+      console.error("Unexpected error:", error);
+    }
+  }
+}
+
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setLoading(false)
+    })
+
+    return () => unsubscribe()
+  }, [])
+
+  return { user, loading, isAuthenticated: !!user }
+}
+export async function getAuthenticatedUser(): Promise<AuthUser | null> {
+  // Example with Google (Firebase, NextAuth, Auth0 will give similar user obj)
+  const storedUser = localStorage.getItem("auth_user")
+  if (storedUser) {
+    return JSON.parse(storedUser) as AuthUser
+  }
+
+  return null
+}
+
+export function saveAuthenticatedUser(user: AuthUser) {
+  localStorage.setItem("auth_user", JSON.stringify(user))
+}
+
+export function clearAuthenticatedUser() {
+  localStorage.removeItem("auth_user")
+}
 // --- NEW: Budget Estimation API ---
 export interface EstimateBudgetRequest {
   destination: string;

@@ -91,7 +91,7 @@ export function HeroSection({
               <ToggleGroupItem
                 value="solo"
                 aria-label="Solo Trip"
-                className="data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+                className="data-[state=on]:bg-blue-500 data-[state=on]:text-white rounded-full px-4 py-2"
               >
                 <User className="h-4 w-4 mr-2" />
                 Solo
@@ -102,7 +102,7 @@ export function HeroSection({
                 <ToggleGroupItem
                   value="group"
                   aria-label="Group Trip"
-                  className="data-[state=on]:bg-blue-500 data-[state=on]:text-white"
+                  className="data-[state=on]:bg-blue-500 data-[state=on]:text-white rounded-full px-4 py-2"
                 >
                   <Users className="h-4 w-4 mr-2" />
                   Group
@@ -115,7 +115,12 @@ export function HeroSection({
                     max={20}
                     value={groupCount}
                     onChange={(e) => setGroupCount(Number(e.target.value))}
-                    className="w-20 text-center"
+                    className="
+    w-20 text-center rounded-lg border 
+    bg-white text-black 
+    dark:bg-gray-800 dark:text-white 
+    placeholder-gray-400 dark:placeholder-gray-500
+  "
                     placeholder="Count"
                   />
                 )}

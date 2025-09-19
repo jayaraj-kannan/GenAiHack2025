@@ -9,6 +9,7 @@ import { ItineraryDisplay } from "@/components/ItineraryDisplay";
 import { DestinationCard } from "@/components/DestinationCard";
 import { DestinationSearch } from "@/components/DestinationSearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Profile } from "@/components/Profile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -314,7 +315,9 @@ export default function Home() {
               </Button>
             )}
             <ThemeToggle />
+             <Profile />
           </div>
+          
         </div>
       </header>
 
