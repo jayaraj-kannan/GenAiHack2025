@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generatePersonalizedItinerary, generatePlanBSuggestions } from "./ai-service";
+import { generatePersonalizedItinerary, generatePlanBSuggestions, estimateBudget  } from "./ai-service";
 import { insertTripSchema, insertItinerarySchema, insertBookingSchema } from "@shared/schema";
 import { z } from "zod";
 import dotenv from "dotenv";
@@ -96,6 +96,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to generate itinerary" });
     }
   });
+// AI-powered budget estimation
+// Define types for safety
+type Mood = "relax" | "adventure" | "culture" | "discovery";
+type TripType = "solo" | "group";
+type TravelMode = "own car" | "public bus" | "train" | "flight" | "own bike" | "cab";
+
+app.post("/api/estimate-budget", async (req, res) => {
+  try {
+    const {
+      destination,
+      duration,
+      moods = ["culture"],
+      tripType = "solo",
+      travelMode = "train",
+    }: {
+      destination: string;
+      duration: number;
+      moods?: Mood[];
+      tripType?: TripType;
+      travelMode?: TravelMode;
+    } = req.body;
+
+    if (!destination || !duration) {
+      return res
+        .status(400)
+        .json({ error: "destination and duration are required" });
+    }
+
+    // ✅ Call AI budget estimator
+    const budgetEstimation = await estimateBudget(
+      destination,
+      moods[0] ?? "culture", // pick first mood (or extend to support multiple)
+      duration,
+      tripType,
+      travelMode
+    );
+
+    return res.json({
+      budgetEstimation, // structured result with budget/moderate/luxury/custom
+      aiGenerated: true,
+    });
+  } catch (error) {
+    console.error("Error estimating budget:", error);
+    return res.status(500).json({ error: "Failed to estimate budget" });
+  }
+});
+
 
   // Generate Plan B suggestions for activities
   app.post("/api/activities/plan-b", async (req, res) => {
@@ -166,7 +213,7 @@ app.get("/api/destinations/search", async (req, res) => {
     res.status(500).json({ error: "Failed to search destinations" });
   }
 });
-
+  
 
   // Weather-based travel date suggestions with AI scoring
   app.get("/api/destinations/:destination/best-dates", async (req, res) => {

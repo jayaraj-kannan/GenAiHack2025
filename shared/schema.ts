@@ -15,6 +15,8 @@ export const trips = pgTable("trips", {
   destination: text("destination").notNull(),
   duration: integer("duration").notNull(), // days
   moods: text("moods").array().notNull(), // travel moods
+  travelMode: text("travel_mode"), // new field for travel mode
+  tripType: text("trip_type"), // new field for trip type
   budget: decimal("budget", { precision: 10, scale: 2 }),
   startDate: text("start_date"),
   endDate: text("end_date"),

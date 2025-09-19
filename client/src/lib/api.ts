@@ -55,7 +55,33 @@ export interface WeatherSuggestion {
   description: string;
 }
 
-// API functions
+// --- NEW: Budget Estimation API ---
+export interface EstimateBudgetRequest {
+  destination: string;
+  duration: number;
+  moods?: string[];
+  tripType?: "solo" | "group";
+  travelMode?: "own car" | "public bus" | "train" | "flight" | "own bike" | "cab";
+}
+
+export interface EstimateBudgetResponse {
+  budgetEstimation: {
+    total: number;
+    breakdown: Record<string, number>; // e.g. { transport: 1000, stay: 3000, food: 1500 }
+  };
+  aiGenerated: boolean;
+}
+
+export async function estimateBudget(
+  data: EstimateBudgetRequest
+): Promise<EstimateBudgetResponse> {
+  return apiRequest("/api/estimate-budget", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+// --- Existing APIs ---
 export async function createTrip(tripData: CreateTripRequest): Promise<Trip> {
   return apiRequest("/api/trips", {
     method: "POST",
@@ -78,7 +104,9 @@ export async function generateItinerary(tripId: string) {
 }
 
 export async function getWeatherSuggestions(destination: string, duration: number = 7) {
-  return apiRequest(`/api/destinations/${encodeURIComponent(destination)}/best-dates?duration=${duration}`);
+  return apiRequest(
+    `/api/destinations/${encodeURIComponent(destination)}/best-dates?duration=${duration}`
+  );
 }
 
 export async function searchDestinations(query: string) {

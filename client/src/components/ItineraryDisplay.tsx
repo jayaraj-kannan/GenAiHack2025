@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, Clock, DollarSign, Users, Calendar, Hotel } from "lucide-react";
+import { MapPin, Clock, IndianRupee, Users, Calendar, Hotel } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ export function ItineraryDisplay({
             Book Hotels
           </Button>
           <Button onClick={onBookNow} data-testid="button-book-now">
-            <DollarSign className="h-4 w-4 mr-2" />
+            <IndianRupee className="h-4 w-4 mr-2" />
             Complete Booking
           </Button>
           <Button variant="outline" onClick={onModifyItinerary} data-testid="button-modify-itinerary">
@@ -141,7 +141,7 @@ export function ItineraryDisplay({
                         </div>
                         
                         <div className="text-right flex-shrink-0">
-                          <div className="font-medium">${activity.cost}</div>
+                          <div className="font-medium">₹{activity.cost}</div>
                           <Badge variant="secondary" className="text-xs mt-1">
                             {activity.type}
                           </Badge>
@@ -161,19 +161,19 @@ export function ItineraryDisplay({
         <h3 className="font-semibold mb-4">Cost Breakdown</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
           <div>
-            <div className="text-lg font-bold text-blue-600">${Math.round(totalBudget * 0.4)}</div>
+            <div className="text-lg font-bold text-blue-600">₹{Math.round(totalBudget * 0.4)}</div>
             <div className="text-xs text-muted-foreground">Accommodation</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-green-600">${Math.round(totalBudget * 0.3)}</div>
+            <div className="text-lg font-bold text-green-600">₹{Math.round(totalBudget * 0.3)}</div>
             <div className="text-xs text-muted-foreground">Activities</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-orange-600">${Math.round(totalBudget * 0.2)}</div>
+            <div className="text-lg font-bold text-orange-600">₹{Math.round(totalBudget * 0.2)}</div>
             <div className="text-xs text-muted-foreground">Food</div>
           </div>
           <div>
-            <div className="text-lg font-bold text-purple-600">${Math.round(totalBudget * 0.1)}</div>
+            <div className="text-lg font-bold text-purple-600">₹{Math.round(totalBudget * 0.1)}</div>
             <div className="text-xs text-muted-foreground">Transport</div>
           </div>
         </div>

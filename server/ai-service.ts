@@ -1,7 +1,9 @@
 import { GoogleGenAI } from "@google/genai";
 import dotenv from "dotenv";
 dotenv.config();
+
 console.log("GOOGLE_AI_API_KEY:", process.env.GOOGLE_AI_API_KEY);
+
 // Trip planner AI service using Gemini
 const ai = new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY || "" });
 
@@ -13,6 +15,7 @@ export interface TripPreferences {
   budget?: number;
   startDate?: string;
   endDate?: string;
+  tripType?: "solo" | "group"; // ✅ added trip type
 }
 
 export interface Activity {
@@ -41,6 +44,40 @@ export interface GeneratedItinerary {
   moodMatched: string[];
 }
 
+// types.ts (optional, if you want to keep it clean)
+export interface BudgetBreakdown {
+  accommodation: number;
+  food: number;
+  transport: number;
+  localTransport: number;
+  activities: number;
+  trips: number;
+  fees: number;
+  simcard: number;
+  insurance: number;
+  emergency: number;
+}
+
+export interface BudgetCategory {
+  total: number;
+  breakdown: BudgetBreakdown;
+  notes: string[];
+}
+
+export interface BudgetEstimation {
+  budget: BudgetCategory;
+  moderate: BudgetCategory;
+  luxury: BudgetCategory;
+  custom: {
+    min: number;
+    max: number;
+    breakdown: BudgetBreakdown;
+    notes: string[];
+  };
+}
+
+
+// -------------------- EXISTING ITINERARY FUNCTION --------------------
 export async function generatePersonalizedItinerary(preferences: TripPreferences): Promise<GeneratedItinerary> {
   try {
     const moodDescriptions = {
@@ -50,7 +87,9 @@ export async function generatePersonalizedItinerary(preferences: TripPreferences
       discovery: "hidden gems, off-the-beaten-path locations, local experiences, unique attractions, secret spots"
     };
 
-    const selectedMoodDescriptions = preferences.moods.map(mood => moodDescriptions[mood as keyof typeof moodDescriptions]).join(", ");
+    const selectedMoodDescriptions = preferences.moods
+      .map(mood => moodDescriptions[mood as keyof typeof moodDescriptions])
+      .join(", ");
 
     const systemPrompt = `You are an expert travel planner AI. Create detailed, personalized itineraries based on traveler preferences. 
 Focus on authentic experiences, optimal timing, and budget consciousness.
@@ -71,7 +110,8 @@ Travel Preferences:
 - Duration: ${preferences.duration} days
 - Mood preferences: ${preferences.moods.join(", ")}
 - Travel mode preferences: ${preferences.travelMode || "flexible"}
-- Budget range: ${preferences.budget ? `$${preferences.budget}` : "moderate budget"}
+- Trip type: ${preferences.tripType || "solo"}
+- Budget range: ${preferences.budget ? `₹${preferences.budget}` : "moderate budget"}
 - Travel dates: ${preferences.startDate || "flexible dates"}
 
 Please create a detailed itinerary with:
@@ -119,13 +159,13 @@ Format the response as JSON with this structure:
     });
 
     const rawJson = response.text;
-    
+
     if (!rawJson) {
       throw new Error("Empty response from AI model");
     }
 
     const itinerary: GeneratedItinerary = JSON.parse(rawJson);
-    
+
     // Validate the response structure
     if (!itinerary.days || !Array.isArray(itinerary.days)) {
       throw new Error("Invalid itinerary structure returned from AI");
@@ -144,7 +184,7 @@ Format the response as JSON with this structure:
 
   } catch (error) {
     console.error("Failed to generate itinerary:", error);
-    
+
     // Fallback itinerary if AI fails
     return generateFallbackItinerary(preferences);
   }
@@ -152,7 +192,7 @@ Format the response as JSON with this structure:
 
 function generateFallbackItinerary(preferences: TripPreferences): GeneratedItinerary {
   const fallbackDays: ItineraryDay[] = [];
-  
+
   for (let day = 1; day <= preferences.duration; day++) {
     const activities: Activity[] = [
       {
@@ -167,7 +207,7 @@ function generateFallbackItinerary(preferences: TripPreferences): GeneratedItine
       },
       {
         id: `day${day}_afternoon`,
-        time: "2:00 PM", 
+        time: "2:00 PM",
         title: "Local Cuisine Experience",
         location: `Traditional Restaurant in ${preferences.destination}`,
         duration: "1.5 hours",
@@ -192,6 +232,164 @@ function generateFallbackItinerary(preferences: TripPreferences): GeneratedItine
     weatherOptimized: false,
     moodMatched: preferences.moods
   };
+}
+
+// budget estimation function
+export async function estimateBudget(
+  destination: string,
+  mood: "relax" | "adventure" | "culture" | "discovery",
+  days: number,
+  tripType: "solo" | "group",
+  travelMode: "own car" | "public bus" | "train" | "flight" | "own bike" | "cab"
+): Promise<BudgetEstimation> {
+  try {
+    const systemPrompt = `You are an expert travel cost estimator specializing in Indian travel.  
+Your task is to estimate realistic daily travel budgets in Indian Rupees for trips.
+
+Factors:
+- Mood (Relax, Adventure, Culture, Discovery)
+- Trip duration
+- Trip type (Solo vs. Group)
+- Travel mode (Own Car, Public Bus, Train, Flight, Own Bike, Cab/Taxi)
+
+Guidelines:
+1. Base costs on Indian travel prices.
+2. For each category ("budget", "moderate", "luxury") provide:
+   - "total": total INR per day
+   - "breakdown": costs split into
+     { accommodation, food, transport, localTransport, activities, trips, fees, simcard, insurance, emergency and add based on travel mode if own bike or car petrol/parking / if public transport  train charges/flight charges / cab charges and dynamic breakdown based on mood}
+   - "notes": 2–3 bullet points with travel advice for that category
+3. Also include "custom": with "min" and "max" tailored to mood/trip/transport, plus its breakdown and notes.
+4. Solo trips cost more per person (no sharing).
+5. Moods affect costs: Relax (resorts/spas), Adventure (gear/guides), Culture (museums/tours), Discovery (variable transport).
+6. Travel mode affects costs: bus/train = cheapest, own car/bike = fuel/parking, flight = highest, cab = mid-high.
+7. Output strictly JSON only.`;
+
+    const prompt = `Estimate the daily budget for an Indian trip.  
+Destination: ${destination}  
+Mood: ${mood}  
+Trip days: ${days}  
+Trip type: ${tripType}  
+Travel mode: ${travelMode}  
+
+Respond in JSON with the following structure:
+{
+  "budget": {
+    "total": number,
+    "breakdown": {
+      "accommodation": number,
+      "food": number,
+      "transport": number,
+      "localTransport": number,
+      "activities": number,
+      "trips": number,
+      "fees": number,
+      "simcard": number,
+      "insurance": number,
+      "emergency": number
+    },
+    "notes": [string, string]
+  },
+  "moderate": { ...same structure... },
+  "luxury": { ...same structure... },
+  "custom": {
+    "min": number,
+    "max": number,
+    "breakdown": { ... },
+    "notes": [string, string]
+  }
+}`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      config: {
+        systemInstruction: systemPrompt,
+        responseMimeType: "application/json",
+      },
+      contents: prompt,
+    });
+
+    const rawJson = response.text;
+    if (!rawJson) {
+      throw new Error("Empty response from AI model");
+    }
+
+    const budget: BudgetEstimation = JSON.parse(rawJson);
+    console.log("Estimated Budget:", budget);
+    return budget;
+
+  } catch (error) {
+    console.error("Failed to estimate budget:", error);
+
+    // Fallback rough estimation (simple mock breakdown)
+    return {
+      budget: {
+        total: 1500,
+        breakdown: {
+          accommodation: 500,
+          food: 300,
+          transport: 200,
+          localTransport: 100,
+          activities: 200,
+          trips: 50,
+          fees: 50,
+          simcard: 50,
+          insurance: 30,
+          emergency: 20,
+        },
+        notes: ["Basic hostel stay", "Street food", "Public transport only"],
+      },
+      moderate: {
+        total: 4000,
+        breakdown: {
+          accommodation: 1500,
+          food: 800,
+          transport: 500,
+          localTransport: 300,
+          activities: 400,
+          trips: 200,
+          fees: 100,
+          simcard: 50,
+          insurance: 80,
+          emergency: 70,
+        },
+        notes: ["3-star hotel", "Mix of dining", "Train/Bus + cabs"],
+      },
+      luxury: {
+        total: 10000,
+        breakdown: {
+          accommodation: 5000,
+          food: 2000,
+          transport: 1000,
+          localTransport: 600,
+          activities: 800,
+          trips: 300,
+          fees: 100,
+          simcard: 50,
+          insurance: 100,
+          emergency: 50,
+        },
+        notes: ["5-star resort", "Private guides", "Flights + taxis"],
+      },
+      custom: {
+        min: 1000,
+        max: 12000,
+        breakdown: {
+          accommodation: 2000,
+          food: 1000,
+          transport: 800,
+          localTransport: 400,
+          activities: 500,
+          trips: 200,
+          fees: 100,
+          simcard: 50,
+          insurance: 100,
+          emergency: 50,
+        },
+        notes: ["Tailored to trip style", "Adjust based on destination"],
+      },
+    };
+  }
 }
 
 export async function generatePlanBSuggestions(

@@ -8,7 +8,7 @@ interface TravelModeSelectorProps {
 }
 
 export function TravelMode({ onModeChange = () => {} }: TravelModeSelectorProps) {
-  const [selectedMode, setSelectedMode] = useState<string>("ownCar");
+  const [selectedMode, setSelectedMode] = useState<string>();
 
   const travelModes = {
     ownCar: {

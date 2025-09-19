@@ -16,13 +16,16 @@ import { ArrowLeft, Sparkles, Users, Download, Loader2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   createTrip,
+  estimateBudget,
   generateItinerary,
   getTrip,
   getTripItineraries,
   type Trip,
   type Itinerary,
+  type EstimateBudgetRequest,
 } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+
 import hampi_heritage from "@assets/generated_images/hampi_heritage.png";
 import tamilnadu from "@assets/generated_images/tamilnadu.png";
 import kerala_backwaters from "@assets/generated_images/kerala_backwaters.png";
@@ -32,6 +35,29 @@ import andaman_beach from "@assets/generated_images/andaman_beach.png";
 
 type PlanningStep = "hero" | "preferences" | "suggestions" | "itinerary";
 
+// ✅ Types for budget
+export interface BudgetOption {
+  total?: number;   // present in budget, moderate, luxury
+  min?: number;     // present in custom
+  max?: number;     // present in custom
+  breakdown: Record<string, number>;
+  notes: string[];
+}
+
+export interface BudgetEstimation {
+  budget: BudgetOption;
+  moderate: BudgetOption;
+  luxury: BudgetOption;
+  custom: BudgetOption;
+}
+
+export interface EstimateBudgetResponse {
+  budgetEstimation: BudgetEstimation;
+  aiGenerated: boolean;
+}
+
+
+
 export default function Home() {
   const [currentStep, setCurrentStep] = useState<PlanningStep>("hero");
   const [selectedDestination, setSelectedDestination] = useState("");
@@ -40,11 +66,17 @@ export default function Home() {
   const [tripDuration, setTripDuration] = useState(7);
   const [selectedDates, setSelectedDates] = useState("");
   const [estimatedBudget, setEstimatedBudget] = useState(0);
+
+  const [budgetData, setBudgetData] = useState<any | null>(null);
+  const [loadingBudget, setLoadingBudget] = useState(false);
+
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [mapOpen, setMapOpen] = useState(false);
   const [tripType, setTripType] = useState<"solo" | "group">("solo");
   const [groupCount, setGroupCount] = useState(2);
+
   const { toast } = useToast();
+
   // React Query hooks for API calls
   const { data: currentTrip } = useQuery({
     queryKey: ["trip", currentTripId],
@@ -102,11 +134,48 @@ export default function Home() {
     },
   });
 
+  // ✅ Fetch budget once when preferences are ready
+ useEffect(() => {
+  if (
+    selectedDestination &&
+    selectedMoods.length > 0 &&
+    selectedTravelMode &&
+    tripType
+  ) {
+    setLoadingBudget(true);
+    (async () => {
+      try {
+        const res = await estimateBudget({
+          destination: selectedDestination,
+          moods: selectedMoods,
+          duration: tripDuration,
+          tripType,
+          travelMode: selectedTravelMode as EstimateBudgetRequest["travelMode"],
+        });
+
+        setBudgetData(res.budgetEstimation ? res.budgetEstimation : null); // ✅ strongly typed
+      } catch (err) {
+        console.error("Failed to fetch budget:", err);
+        setBudgetData(null);
+      } finally {
+        setLoadingBudget(false);
+      }
+    })();
+  }
+}, [
+  selectedDestination,
+  selectedMoods,
+  tripDuration,
+  selectedTravelMode,
+  tripType,
+]);
+
+
   const featuredDestinations = [
     {
       id: "tn_culture",
       name: "Tamil Nadu Temples",
-      image: tamilnadu, // replace with actual image path
+      image: tamilnadu,
       description:
         "Marvel at the Dravidian architecture of Meenakshi Temple, Brihadeeswarar Temple, and the Shore Temple at Mahabalipuram.",
       rating: 4.8,
@@ -187,7 +256,6 @@ export default function Home() {
 
   const handleGenerateItinerary = async () => {
     try {
-      // First create the trip
       const tripData = {
         destination: selectedDestination,
         duration: tripDuration,
@@ -199,8 +267,6 @@ export default function Home() {
       };
 
       const trip = await createTripMutation.mutateAsync(tripData);
-
-      // Then generate the AI itinerary
       await generateItineraryMutation.mutateAsync(trip.id);
     } catch (error) {
       console.error("Error in trip planning flow:", error);
@@ -208,7 +274,6 @@ export default function Home() {
   };
 
   const handleBookNow = () => {
-    console.log("Initiating booking process");
     if (currentTrip) {
       toast({
         title: "🎉 Booking Initiated!",
@@ -225,6 +290,7 @@ export default function Home() {
     setSelectedDates("");
     setEstimatedBudget(0);
     setCurrentTripId(null);
+    setBudgetData(null);
   };
 
   return (
@@ -242,11 +308,7 @@ export default function Home() {
 
           <div className="flex items-right gap-4">
             {currentStep !== "hero" && (
-              <Button
-                variant="ghost"
-                onClick={handleBackToSearch}
-                data-testid="button-back-to-search"
-              >
+              <Button variant="ghost" onClick={handleBackToSearch}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 Back to Search
               </Button>
@@ -268,7 +330,7 @@ export default function Home() {
               setGroupCount={setGroupCount}
             />
             {/* Featured Destinations */}
-            <section className="w-full ontainer px-6 py-12">
+            <section className="w-full container px-6 py-12">
               <div className="text-center mb-8">
                 <h2 className="text-3xl font-bold mb-4">Popular Experiences</h2>
                 <p className="text-muted-foreground">
@@ -317,18 +379,23 @@ export default function Home() {
                     />
                   </Card>
                 </div>
+
                 <Card className="p-6">
-                  <TravelMode
-                    onModeChange={(mode) => setSelectedTravelMode(mode)}
-                  />
+                  <TravelMode onModeChange={setSelectedTravelMode} />
                 </Card>
+
                 <Card className="p-6">
-                  <BudgetEstimator
-                    destination={selectedDestination}
-                    duration={tripDuration}
-                    moods={selectedMoods}
-                    onBudgetChange={setEstimatedBudget}
-                  />
+                  {loadingBudget ? (
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      <span>Calculating budget...</span>
+                    </div>
+                  ) : (
+                    <BudgetEstimator
+                      data={budgetData}
+                      onSelect={setEstimatedBudget}
+                    />
+                  )}
                 </Card>
 
                 <Card className="p-6">
@@ -348,7 +415,6 @@ export default function Home() {
                     generateItineraryMutation.isPending
                   }
                   className="px-8 py-3 text-lg"
-                  data-testid="button-generate-itinerary"
                 >
                   {createTripMutation.isPending ||
                   generateItineraryMutation.isPending ? (
@@ -396,54 +462,6 @@ export default function Home() {
                 </p>
               </div>
             )}
-
-            {/* Additional Features */}
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card className="p-6 text-center hover-elevate">
-                <Users className="h-8 w-8 mx-auto mb-3 text-blue-500" />
-                <h3 className="font-semibold mb-2">Collaborative Planning</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Invite friends and plan together
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.log("Group planning")}
-                >
-                  Coming Soon
-                </Button>
-              </Card>
-
-              <Card className="p-6 text-center hover-elevate">
-                <Download className="h-8 w-8 mx-auto mb-3 text-green-500" />
-                <h3 className="font-semibold mb-2">Offline Access</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Download for offline use
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.log("Offline download")}
-                >
-                  Download
-                </Button>
-              </Card>
-
-              <Card className="p-6 text-center hover-elevate">
-                <Sparkles className="h-8 w-8 mx-auto mb-3 text-purple-500" />
-                <h3 className="font-semibold mb-2">AI Plan B</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Real-time adaptive suggestions
-                </p>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => console.log("AI Plan B")}
-                >
-                  Enable
-                </Button>
-              </Card>
-            </div>
           </div>
         )}
       </main>

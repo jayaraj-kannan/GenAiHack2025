@@ -322,7 +322,7 @@ export function BookingIntegration({
                   <div className="text-right space-y-3">
                     <div>
                       <div className="text-2xl font-bold text-primary">
-                        ${option.price}
+                        ₹{option.price}
                       </div>
                       <div className="text-sm text-muted-foreground">per night</div>
                       <div className="text-xs text-muted-foreground">via {option.provider}</div>
