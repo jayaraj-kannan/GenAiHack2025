@@ -328,6 +328,14 @@ export default function Home() {
   // generate itinerary TODO
   const handleGenerateItinerary = async () => {
     try {
+      if (!selectedDestinationDetails) {
+        toast({
+          title: "Missing Destination Details",
+          description: "Please select a destination to continue.",
+          variant: "destructive",
+        });
+        return;
+      }
       const tripData = {
         destination: selectedDestination,
         description: `Trip to ${selectedDestination}`,
@@ -556,8 +564,9 @@ export default function Home() {
 
                 <Card className="p-6">
                   <WeatherSuggestion
-                    destination={selectedDestination}
-                    onDateSelect={setSelectedDates}
+                  destination={selectedDestination}
+                  destinationDetails={selectedDestinationDetails}
+                  onDateSelect={setSelectedDates}
                   />
                 </Card>
               </div>

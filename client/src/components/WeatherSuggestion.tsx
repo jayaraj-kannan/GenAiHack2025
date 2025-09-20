@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { addDays, addWeeks, parse } from "date-fns";
+import { useState, useMemo } from "react";
+import { addDays, addWeeks, parse, format } from "date-fns";
 import { Sun, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
-import { getWeatherSuggestions } from "@/lib/api";
+import { getWeatherSuggestions, getWeatherForecast } from "@/lib/api";
 import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
 import WeatherCalendar from "./WeatherCalendar";
+import { Destination } from "@/lib/types";
 
 interface WeatherDay {
   dateRange: string;
@@ -20,13 +20,11 @@ interface WeatherDay {
 
 interface WeatherSuggestionProps {
   destination: string;
+  destinationDetails: Destination | null; // new prop for destination details
   onDateSelect: (date: string) => void;
 }
 
-function parseDateRange(
-  dateRange: string,
-  year: number
-): DateRange | undefined {
+function parseDateRange(dateRange: string, year: number): DateRange | undefined {
   const parts = dateRange.split(" - ");
   if (parts.length !== 2) return undefined;
   try {
@@ -40,8 +38,10 @@ function parseDateRange(
 
 export function WeatherSuggestion({
   destination,
+  destinationDetails,
   onDateSelect,
 }: WeatherSuggestionProps) {
+  // 🔹 Get AI-based weather suggestions
   const { data: weatherData, isLoading, error } = useQuery({
     queryKey: ["weather", destination],
     queryFn: () => getWeatherSuggestions(destination, 14),
@@ -51,14 +51,42 @@ export function WeatherSuggestion({
   const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [showCalendar, setShowCalendar] = useState(false);
 
+  // 🔹 Fetch dynamic forecast only when calendar is opened
+  const {
+    data: forecast,
+    isLoading: forecastLoading,
+  } = useQuery({
+    queryKey: ["forecast", destinationDetails.lat, destinationDetails.lon],
+    queryFn: () => getWeatherForecast(destinationDetails.lat, destinationDetails.lon, 10),
+    enabled: showCalendar && !!destinationDetails.lat && !!destinationDetails.lon,
+  });
+
+  // 🔹 Normalize forecast into WeatherCalendar format
+  const calendarWeather = useMemo(() => {
+    if (!forecast) return [];
+    return forecast.forecastDays.map((day: any) => {
+      const conditionText = day.condition.toLowerCase();
+      let condition: "sunny" | "cloudy" | "rainy" = "sunny";
+      if (conditionText.includes("cloud")) condition = "cloudy";
+      if (conditionText.includes("rain")) condition = "rainy";
+
+      return {
+        date: new Date(day.date),
+        condition,
+        temperature: day.maxTemp ?? 0,
+      };
+    });
+  }, [forecast]);
+
   const handleDateSelect = (date: Date) => {
-    // optional: if you want single-date handling in the calendar
+    // optional single-date handling
   };
 
   const handleRangeSelect = (startDate: Date, endDate: Date | null) => {
     console.log("Range selected:", startDate, endDate);
   };
 
+  // 🔹 Sample events (keep your mock data for now)
   const sampleEvents = [
     {
       id: "1",
@@ -66,8 +94,7 @@ export function WeatherSuggestion({
       date: new Date(),
       time: "9:00 AM - 10:00 AM",
       type: "work" as const,
-      description:
-        "Weekly team sync to discuss project progress and upcoming deliverables.",
+      description: "Weekly team sync to discuss project progress and upcoming deliverables.",
       location: "Conference Room A",
       attendees: ["John Doe", "Jane Smith", "Mike Johnson"],
     },
@@ -103,51 +130,13 @@ export function WeatherSuggestion({
       date: addWeeks(new Date(), 1),
       time: "3:00 PM - 5:00 PM",
       type: "work" as const,
-      description:
-        "Quarterly board meeting to review performance and strategy.",
+      description: "Quarterly board meeting to review performance and strategy.",
       location: "Boardroom",
       attendees: ["CEO", "CTO", "CFO", "Board Members"],
     },
   ];
 
-  const sampleWeather = [
-    {
-      date: new Date(),
-      condition: "sunny" as const,
-      temperature: 24,
-      humidity: 65,
-      description: "partly cloudy",
-    },
-    {
-      date: addDays(new Date(), 1),
-      condition: "cloudy" as const,
-      temperature: 19,
-      humidity: 78,
-      description: "overcast",
-    },
-    {
-      date: addDays(new Date(), 2),
-      condition: "rainy" as const,
-      temperature: 16,
-      humidity: 85,
-      description: "light rain",
-    },
-    {
-      date: addDays(new Date(), 3),
-      condition: "sunny" as const,
-      temperature: 22,
-      humidity: 60,
-      description: "clear sky",
-    },
-    {
-      date: addDays(new Date(), 4),
-      condition: "cloudy" as const,
-      temperature: 18,
-      humidity: 72,
-      description: "mostly cloudy",
-    },
-  ];
-
+  // 🔹 AI recommendation cards
   const weatherDays: WeatherDay[] =
     (weatherData?.recommendations || []).map((rec: any) => ({
       dateRange: rec.dateRange,
@@ -185,8 +174,7 @@ export function WeatherSuggestion({
         <div className="grid gap-3">
           {weatherDays.map((day, index) => {
             const isSelected =
-              date &&
-              format(date.from!, "MMM d") === day.dateRange.split(" - ")[0];
+              date && format(date.from!, "MMM d") === day.dateRange.split(" - ")[0];
 
             return (
               <Card
@@ -196,10 +184,7 @@ export function WeatherSuggestion({
                 }`}
                 onClick={() => {
                   onDateSelect(day.dateRange);
-                  const parsed = parseDateRange(
-                    day.dateRange,
-                    new Date().getFullYear()
-                  );
+                  const parsed = parseDateRange(day.dateRange, new Date().getFullYear());
                   if (parsed) {
                     setDate(parsed);
                   }
@@ -208,14 +193,10 @@ export function WeatherSuggestion({
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="font-medium">{day.dateRange}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {day.condition}
-                    </p>
+                    <p className="text-sm text-muted-foreground">{day.condition}</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">
-                      {day.temperature}°C
-                    </div>
+                    <div className="text-lg font-semibold">{day.temperature}°C</div>
                     <Badge>{day.score}% Perfect</Badge>
                   </div>
                 </div>
@@ -244,18 +225,25 @@ export function WeatherSuggestion({
               ×
             </button>
 
-            <h4 className="mb-4 text-lg font-semibold">
-              Select your travel dates
-            </h4>
+            <h4 className="mb-4 text-lg font-semibold">Select your travel dates</h4>
 
-            <WeatherCalendar
-              onDateSelect={handleDateSelect}
-              onRangeSelect={handleRangeSelect}
-              events={sampleEvents}
-              weather={sampleWeather}
-              className="w-full"
-              selectedRange={date}
-            />
+            {forecastLoading ? (
+              <div className="text-center py-6">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground">
+                  Loading forecast data...
+                </p>
+              </div>
+            ) : (
+              <WeatherCalendar
+                onDateSelect={handleDateSelect}
+                onRangeSelect={handleRangeSelect}
+                events={sampleEvents}
+                weather={calendarWeather}
+                className="w-full"
+                selectedRange={date}
+              />
+            )}
 
             <div className="flex justify-end gap-2 mt-6">
               <Button variant="outline" onClick={() => setShowCalendar(false)}>
