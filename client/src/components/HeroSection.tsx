@@ -9,9 +9,10 @@ import heroImage from "@assets/generated_images/Travel_destination_hero_image_34
 
 // --- Add this import for your modal (adjust path as needed) ---
 import { MapModal } from "./MapModal";
+import { Destination } from "@/lib/types";
 
 interface HeroSectionProps {
-  onGetStarted: (destination: string) => void;
+  onGetStarted: (destination: string, destinationDetails: Destination) => void;
   tripType: "solo" | "group";
   setTripType: (val: "solo" | "group") => void;
   groupCount: number;
@@ -149,7 +150,7 @@ export function HeroSection({
       <MapModal
         open={mapOpen}
         onClose={() => setMapOpen(false)}
-        onPlaceSelect={(place) => onGetStarted(place.name)}
+        onPlaceSelect={(place) => onGetStarted(place.name, place)}
       />
     </div>
   );

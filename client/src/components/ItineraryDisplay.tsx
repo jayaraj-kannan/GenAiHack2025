@@ -48,10 +48,21 @@ export function ItineraryDisplay({
   };
   
   // Calculate check-in and check-out dates from the itinerary
-  const checkInDate = days.length > 0 ? days[0].date : new Date().toISOString().split('T')[0];
-  const checkOutDate = days.length > 0 ? 
-    new Date(new Date(days[days.length - 1].date).getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0] :
-    new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const checkInDate =
+  days.length > 0 && !isNaN(new Date(days[0].date).getTime())
+    ? new Date(days[0].date).toISOString().split("T")[0]
+    : new Date().toISOString().split("T")[0];
+
+const checkOutDate =
+  days.length > 0 && !isNaN(new Date(days[days.length - 1].date).getTime())
+    ? new Date(
+        new Date(days[days.length - 1].date).getTime() + 24 * 60 * 60 * 1000
+      )
+        .toISOString()
+        .split("T")[0]
+    : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0];
   return (
     <div className="space-y-6">
       {/* Header */}

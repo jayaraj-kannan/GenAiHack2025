@@ -50,7 +50,9 @@ export function TravelMode({ onModeChange = () => {} }: TravelModeSelectorProps)
 
   useEffect(() => {
     // fire default selection once on mount
-    onModeChange(selectedMode);
+    if (selectedMode !== undefined) {
+      onModeChange(selectedMode);
+    }
   }, []);
 
   return (

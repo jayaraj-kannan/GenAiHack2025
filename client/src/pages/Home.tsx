@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HeroSection } from "@/components/HeroSection";
 import { MoodSelector } from "@/components/MoodSelector";
 import { TripDurationPicker } from "@/components/TripDurationPicker";
@@ -7,6 +7,7 @@ import { BudgetEstimator } from "@/components/BudgetEstimator";
 import { TravelMode } from "@/components/TravelMode";
 import { ItineraryDisplay } from "@/components/ItineraryDisplay";
 import { DestinationCard } from "@/components/DestinationCard";
+import { TripCard } from "@/components/TripCard";
 import { DestinationSearch } from "@/components/DestinationSearch";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Profile } from "@/components/Profile";
@@ -21,6 +22,9 @@ import {
   generateItinerary,
   getTrip,
   getTripItineraries,
+  updateTripItineraries,
+  getUserTrips,
+  useAuth,
   type Trip,
   type Itinerary,
   type EstimateBudgetRequest,
@@ -33,14 +37,15 @@ import kerala_backwaters from "@assets/generated_images/kerala_backwaters.png";
 import coorg_adventure from "@assets/generated_images/coorg_adventure.png";
 import pondicherry from "@assets/generated_images/pondicherry.png";
 import andaman_beach from "@assets/generated_images/andaman_beach.png";
+import { Destination } from "@/lib/types";
 
 type PlanningStep = "hero" | "preferences" | "suggestions" | "itinerary";
 
 // ✅ Types for budget
 export interface BudgetOption {
-  total?: number;   // present in budget, moderate, luxury
-  min?: number;     // present in custom
-  max?: number;     // present in custom
+  total?: number; // present in budget, moderate, luxury
+  min?: number; // present in custom
+  max?: number; // present in custom
   breakdown: Record<string, number>;
   notes: string[];
 }
@@ -57,11 +62,11 @@ export interface EstimateBudgetResponse {
   aiGenerated: boolean;
 }
 
-
-
 export default function Home() {
+  const { user, isAuthenticated } = useAuth();
   const [currentStep, setCurrentStep] = useState<PlanningStep>("hero");
   const [selectedDestination, setSelectedDestination] = useState("");
+  const [selectedDestinationDetails, setSelectedDestinationDetails] = useState<Destination | null>(null);
   const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
   const [selectedTravelMode, setSelectedTravelMode] = useState<string>("");
   const [tripDuration, setTripDuration] = useState(7);
@@ -75,9 +80,17 @@ export default function Home() {
   const [mapOpen, setMapOpen] = useState(false);
   const [tripType, setTripType] = useState<"solo" | "group">("solo");
   const [groupCount, setGroupCount] = useState(2);
-
+  const tripsSectionRef = useRef<HTMLDivElement | null>(null);
   const { toast } = useToast();
-
+  const {
+    data: trips,
+    isLoading: tripsLoading,
+    error: tripsError,
+  } = useQuery<Trip[]>({
+    queryKey: ["userTrips", user?.uid],
+    queryFn: () => getUserTrips(user!.uid),
+    enabled: !!isAuthenticated && !!user, // only fetch when logged in
+  });
   // React Query hooks for API calls
   const { data: currentTrip } = useQuery({
     queryKey: ["trip", currentTripId],
@@ -119,7 +132,8 @@ export default function Home() {
   const generateItineraryMutation = useMutation({
     mutationFn: generateItinerary,
     onSuccess: async () => {
-      setItineraries(await getTripItineraries(currentTripId!));
+      const response = await getTripItineraries(currentTripId!);
+      setItineraries(response);
       setCurrentStep("itinerary");
       toast({
         title: "Itinerary Generated!",
@@ -136,41 +150,63 @@ export default function Home() {
   });
 
   // ✅ Fetch budget once when preferences are ready
- useEffect(() => {
-  if (
-    selectedDestination &&
-    selectedMoods.length > 0 &&
-    selectedTravelMode &&
-    tripType
-  ) {
-    setLoadingBudget(true);
-    (async () => {
-      try {
-        const res = await estimateBudget({
-          destination: selectedDestination,
-          moods: selectedMoods,
-          duration: tripDuration,
-          tripType,
-          travelMode: selectedTravelMode as EstimateBudgetRequest["travelMode"],
-        });
+  useEffect(() => {
+    if (
+      selectedDestination &&
+      selectedMoods.length > 0 &&
+      selectedTravelMode &&
+      tripType
+    ) {
+      setLoadingBudget(true);
+      (async () => {
+        try {
+          const res = await estimateBudget({
+            destination: selectedDestination,
+            moods: selectedMoods,
+            duration: tripDuration,
+            tripType,
+            travelMode:
+              selectedTravelMode as EstimateBudgetRequest["travelMode"],
+          });
 
-        setBudgetData(res.budgetEstimation ? res.budgetEstimation : null); // ✅ strongly typed
-      } catch (err) {
-        console.error("Failed to fetch budget:", err);
-        setBudgetData(null);
-      } finally {
-        setLoadingBudget(false);
-      }
-    })();
-  }
-}, [
-  selectedDestination,
-  selectedMoods,
-  tripDuration,
-  selectedTravelMode,
-  tripType,
-]);
-
+          setBudgetData(res.budgetEstimation ? res.budgetEstimation : null); // ✅ strongly typed
+        } catch (err) {
+          console.error("Failed to fetch budget:", err);
+          setBudgetData(null);
+        } finally {
+          setLoadingBudget(false);
+        }
+      })();
+    }
+  }, [
+    selectedDestination,
+    selectedMoods,
+    tripDuration,
+    selectedTravelMode,
+    tripType,
+  ]);
+  const mock_trips = [
+    {
+      id: "1",
+      destination: "TamilNadu",
+      description: "Tamilnadu temples",
+      budget: 11550,
+      duration: 7,
+      moods: ["Culture", "Relax", "Adventure", "Discovery"],
+      travelMode: "ownBike",
+      tripType: "solo",
+    },
+    {
+      id: "2",
+      destination: "Kerala",
+      description: "Backwaters and greenery",
+      budget: 14500,
+      duration: 6,
+      moods: ["Relax", "Discovery"],
+      travelMode: "train",
+      tripType: "group",
+    },
+  ];
 
   const featuredDestinations = [
     {
@@ -183,6 +219,12 @@ export default function Home() {
       duration: "5-7 days",
       price: 65000,
       mood: "Culture",
+      // Destination type fields
+      fullName: "Tamil Nadu, India",
+      lat: 10.7905,
+      lon: 78.7047,
+      placeId: "ChIJyWEHuEmuEmsRm9hTkapTCrk", // Example, replace as needed
+      type: "region",
     },
     {
       id: "kerala_backwaters",
@@ -194,6 +236,11 @@ export default function Home() {
       duration: "4-6 days",
       price: 72000,
       mood: "Relax",
+      fullName: "Kerala, India",
+      lat: 9.9312,
+      lon: 76.2673,
+      placeId: "ChIJL_P_CXMEDTkRw0ZdG-0GVvw", // Example, replace as needed
+      type: "region",
     },
     {
       id: "coorg_adventure",
@@ -205,6 +252,11 @@ export default function Home() {
       duration: "6-8 days",
       price: 78000,
       mood: "Adventure",
+      fullName: "Coorg, Karnataka, India",
+      lat: 12.3375,
+      lon: 75.8069,
+      placeId: "ChIJw3t8QwQFrjsRjN1lQ4v6A2A", // Example, replace as needed
+      type: "region",
     },
     {
       id: "pondy_romantic",
@@ -216,6 +268,11 @@ export default function Home() {
       duration: "3-5 days",
       price: 55000,
       mood: "Romantic",
+      fullName: "Puducherry, India",
+      lat: 11.9416,
+      lon: 79.8083,
+      placeId: "ChIJdUyx15R2UjoRkM2MIXVWBAQ", // Example, replace as needed
+      type: "city",
     },
     {
       id: "andaman_beach",
@@ -227,6 +284,11 @@ export default function Home() {
       duration: "5-7 days",
       price: 95000,
       mood: "Beach & Coastal",
+      fullName: "Andaman and Nicobar Islands, India",
+      lat: 11.7401,
+      lon: 92.6586,
+      placeId: "ChIJw2w3uLw1XToRrQ1Q1Q1Q1Q1", // Example, replace as needed
+      type: "region",
     },
     {
       id: "hampi_heritage",
@@ -238,15 +300,24 @@ export default function Home() {
       duration: "4-6 days",
       price: 60000,
       mood: "Heritage",
+      fullName: "Hampi, Karnataka, India",
+      lat: 15.3350,
+      lon: 76.4600,
+      placeId: "ChIJrQ1Q1Q1Q1Q1Q1Q1Q1Q1Q1Q1", // Example, replace as needed
+      type: "city",
     },
   ];
 
-  const handleDestinationSelect = (destination: string) => {
+  const handleDestinationSelect = (destination: string, destinationDetails: Destination) => {
     setSelectedDestination(destination);
+    setSelectedDestinationDetails(destinationDetails);
     setCurrentStep("preferences");
     console.log("Starting planning for:", destination);
   };
-
+  const handleTripSelect = (id: string) => {
+    console.log("Trip selected:", id);
+    // You can navigate, open modal, or update state here
+  };
   const handleMoodToggle = (moodId: string) => {
     setSelectedMoods((prev) =>
       prev.includes(moodId)
@@ -254,23 +325,45 @@ export default function Home() {
         : [...prev, moodId]
     );
   };
-
+  // generate itinerary TODO
   const handleGenerateItinerary = async () => {
     try {
       const tripData = {
         destination: selectedDestination,
+        description: `Trip to ${selectedDestination}`,
+        destinationDetails: selectedDestinationDetails,
         duration: tripDuration,
         moods: selectedMoods,
+        tripType: tripType || "solo",
         travelMode: selectedTravelMode,
         budget: estimatedBudget > 0 ? estimatedBudget.toString() : undefined,
         startDate: selectedDates || undefined,
         status: "planning",
+        userId: user?.uid || null,
       };
 
       const trip = await createTripMutation.mutateAsync(tripData);
-      await generateItineraryMutation.mutateAsync(trip.id);
+      const response = await generateItineraryMutation.mutateAsync(trip.id);
+
+      // Defensive: check if response is valid JSON/object
+      if (!response || typeof response !== "object") {
+        toast({
+          title: "Itinerary Generation Failed",
+          description: "No itinerary data was returned. Please try again.",
+          variant: "destructive",
+        });
+        return;
+      } else {
+        updateTripItineraries(trip.id, response);
+      }
     } catch (error) {
       console.error("Error in trip planning flow:", error);
+      toast({
+        title: "Error",
+        description:
+          "There was a problem generating your itinerary. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -315,9 +408,8 @@ export default function Home() {
               </Button>
             )}
             <ThemeToggle />
-             <Profile />
+            <Profile />
           </div>
-          
         </div>
       </header>
 
@@ -332,6 +424,67 @@ export default function Home() {
               groupCount={groupCount}
               setGroupCount={setGroupCount}
             />
+            {/* Your trips */}
+            <section id="trips" className="w-full container px-6 py-12">
+              <div className="text-center mb-8">
+                <h2 className="text-3xl font-bold mb-4">Your Trips</h2>
+                <p className="text-muted-foreground">
+                  View and manage your upcoming and past trips
+                </p>
+              </div>
+
+              {(() => {
+                if (tripsLoading) {
+                  return (
+                    <div className="flex justify-center items-center py-12">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      <span>Loading your trips...</span>
+                    </div>
+                  );
+                } else if (tripsError) {
+                  return (
+                    <div className="text-center text-red-500">
+                      Failed to load trips. Please try again later.
+                    </div>
+                  );
+                } else if (trips && trips.length > 0) {
+                  return (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                      {trips.map((trip) => (
+                        <TripCard
+                          key={trip.id}
+                          id={trip.id}
+                          destination={trip.destination}
+                          description={trip.description ?? ""}
+                          duration={trip.duration}
+                          moods={trip.moods}
+                          budget={Number(trip?.budget) || 0}
+                          travelMode={trip.travelMode ?? "unknown"}
+                          tripType={trip.tripType ?? "solo"}
+                          onClick={(id) => handleTripSelect(id)}
+                        />
+                      ))}
+                    </div>
+                  );
+                } else {
+                  return (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p>You don’t have any saved trips yet.</p>
+                      <Button
+                        className="mt-4"
+                        onClick={() =>
+                          tripsSectionRef.current?.scrollIntoView({
+                            behavior: "smooth",
+                          })
+                        }
+                      >
+                        Start Planning
+                      </Button>
+                    </div>
+                  );
+                }
+              })()}
+            </section>
             {/* Featured Destinations */}
             <section className="w-full container px-6 py-12">
               <div className="text-center mb-8">
@@ -345,7 +498,7 @@ export default function Home() {
                   <DestinationCard
                     key={dest.id}
                     {...dest}
-                    onClick={() => handleDestinationSelect(dest.name)}
+                    onClick={() => handleDestinationSelect(dest.name, dest)}
                   />
                 ))}
               </div>

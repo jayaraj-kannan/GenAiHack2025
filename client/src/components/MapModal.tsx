@@ -5,13 +5,13 @@ const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 interface MapModalProps {
   readonly open: boolean;
   readonly onClose: () => void;
-  readonly onPlaceSelect: (place: { name: string; lat: number; lng: number }) => void;
+  readonly onPlaceSelect: (place: { name: string; fullName: string; lat: number; lon: number ;placeId: string;type: string;  }) => void;
 }
 
 export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [selectedPlace, setSelectedPlace] = useState<{ name: string; lat: number; lng: number } | null>(null);
+  const [selectedPlace, setSelectedPlace] = useState<{ name: string; fullName: string; lat: number; lon: number ;placeId: string;type: string;  } | null>(null);
   const [marker, setMarker] = useState<any>(null);
   const mapInstanceRef = useRef<any>(null);
 
@@ -82,7 +82,7 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
           mapInstance.panTo({ lat, lng });
           mapInstance.setZoom(14);
 
-          setSelectedPlace({ name: place.formatted_address || place.name, lat, lng });
+          setSelectedPlace({ name: place.formatted_address || place.name, fullName: place.formatted_address || place.name, lat, lon: place.geometry.location.lng(), placeId: place.place_id, type: place.types[0] });
         });
       }
 
@@ -115,7 +115,7 @@ export function MapModal({ open, onClose, onPlaceSelect }: MapModalProps) {
     const geocoder = new (window as any).google.maps.Geocoder();
     geocoder.geocode({ location: { lat, lng } }, (results: any, status: any) => {
       if (status === "OK" && results[0]) {
-        setSelectedPlace({ name: results[0].formatted_address, lat, lng });
+        setSelectedPlace({ name: results[0].formatted_address, fullName: results[0].formatted_address, lat, lon: results[0].geometry.location.lng(), placeId: results[0].place_id, type: results[0].types[0] });
         if (marker) marker.setMap(null);
         const newMarker = new (window as any).google.maps.Marker({
           position: { lat, lng },

@@ -49,6 +49,14 @@ export function BudgetEstimator({ data, onSelect }: BudgetEstimatorProps) {
 
   return (
     <div className="space-y-6">
+      <div className="flex items-center gap-2">
+              <IndianRupee className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold">Smart Budget Estimator</h3>
+            </div>
+      
+            <p className="text-sm text-muted-foreground">
+              Choose your travel mode and get an estimated budget for your trip.
+            </p>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {ranges.map((range) => {
           const option = data[range];

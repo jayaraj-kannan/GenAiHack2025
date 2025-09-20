@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Cloud, Sun, CloudRain } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-
+import { DateRange } from "react-day-picker";
 interface Event {
   id: string;
   title: string;
@@ -25,6 +25,7 @@ interface CalendarProps {
   events?: Event[];
   weather?: Weather[];
   className?: string;
+  selectedRange?: DateRange; 
 }
 
 const WeatherCalendar: React.FC<CalendarProps> = ({

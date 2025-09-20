@@ -5,9 +5,10 @@ import { Card } from "@/components/ui/card";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { searchDestinations } from "@/lib/api";
+import { Destination } from "@/lib/types";
 
 interface DestinationSearchProps {
-  onDestinationSelect: (destination: string) => void;
+  onDestinationSelect: (destination: string, destinationDetails: Destination) => void;
 }
 
 export function DestinationSearch({
@@ -46,9 +47,9 @@ export function DestinationSearch({
   const suggestions = searchResults?.suggestions || [];
 
   const handleDestinationClick = (suggestion: any) => {
-    setSearchQuery(suggestion);
+    setSearchQuery(suggestion.name);
     setShowSuggestions(false);
-    onDestinationSelect(suggestion);
+    onDestinationSelect(suggestion.name ,suggestion);
     console.log("Destination selected:", suggestion);
   };
 
@@ -92,7 +93,7 @@ export function DestinationSearch({
                     key={index}
                     variant="ghost"
                     className="w-full justify-start p-2 h-auto"
-                    onClick={() => handleDestinationClick(suggestion.name)}
+                    onClick={() => handleDestinationClick(suggestion)}
                     data-testid={`button-destination-${index}`}
                   >
                     <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />

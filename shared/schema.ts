@@ -13,6 +13,8 @@ export const trips = pgTable("trips", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").references(() => users.id),
   destination: text("destination").notNull(),
+  description: text("description").notNull(),
+  destinationDetails: jsonb("destination_details"), // new field for destination details
   duration: integer("duration").notNull(), // days
   moods: text("moods").array().notNull(), // travel moods
   travelMode: text("travel_mode"), // new field for travel mode

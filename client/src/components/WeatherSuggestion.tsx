@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { addDays, addWeeks } from 'date-fns';
+import { addDays, addWeeks, parse } from "date-fns";
 import { Sun, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -23,106 +23,131 @@ interface WeatherSuggestionProps {
   onDateSelect: (date: string) => void;
 }
 
-export function WeatherSuggestion({ destination, onDateSelect }: WeatherSuggestionProps) {
+function parseDateRange(
+  dateRange: string,
+  year: number
+): DateRange | undefined {
+  const parts = dateRange.split(" - ");
+  if (parts.length !== 2) return undefined;
+  try {
+    const from = parse(parts[0], "MMM d", new Date(year, 0, 1));
+    const to = parse(parts[1], "MMM d", new Date(year, 0, 1));
+    return { from, to };
+  } catch {
+    return undefined;
+  }
+}
+
+export function WeatherSuggestion({
+  destination,
+  onDateSelect,
+}: WeatherSuggestionProps) {
   const { data: weatherData, isLoading, error } = useQuery({
     queryKey: ["weather", destination],
-    queryFn: () => getWeatherSuggestions(destination, 7),
+    queryFn: () => getWeatherSuggestions(destination, 14),
     enabled: !!destination,
   });
-  const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [showCalendar, setShowCalendar] = useState(false);
+
   const handleDateSelect = (date: Date) => {
-    setSelectedDate(date);
+    // optional: if you want single-date handling in the calendar
   };
+
   const handleRangeSelect = (startDate: Date, endDate: Date | null) => {
-    console.log('Range selected:', startDate, endDate);
+    console.log("Range selected:", startDate, endDate);
   };
+
   const sampleEvents = [
     {
-      id: '1',
-      title: 'Team Meeting',
+      id: "1",
+      title: "Team Meeting",
       date: new Date(),
-      time: '9:00 AM - 10:00 AM',
-      type: 'work' as const,
-      description: 'Weekly team sync to discuss project progress and upcoming deliverables.',
-      location: 'Conference Room A',
-      attendees: ['John Doe', 'Jane Smith', 'Mike Johnson']
+      time: "9:00 AM - 10:00 AM",
+      type: "work" as const,
+      description:
+        "Weekly team sync to discuss project progress and upcoming deliverables.",
+      location: "Conference Room A",
+      attendees: ["John Doe", "Jane Smith", "Mike Johnson"],
     },
     {
-      id: '2',
-      title: 'Dentist Appointment',
+      id: "2",
+      title: "Dentist Appointment",
       date: addDays(new Date(), 2),
-      time: '2:00 PM - 3:00 PM',
-      type: 'personal' as const,
-      description: 'Regular dental checkup and cleaning.',
-      location: 'Downtown Dental Clinic'
+      time: "2:00 PM - 3:00 PM",
+      type: "personal" as const,
+      description: "Regular dental checkup and cleaning.",
+      location: "Downtown Dental Clinic",
     },
     {
-      id: '3',
-      title: 'Project Deadline',
+      id: "3",
+      title: "Project Deadline",
       date: addDays(new Date(), 5),
-      type: 'important' as const,
-      description: 'Final submission for the Q4 product launch.',
-      location: 'Office'
+      type: "important" as const,
+      description: "Final submission for the Q4 product launch.",
+      location: "Office",
     },
     {
-      id: '4',
-      title: 'Coffee with Sarah',
+      id: "4",
+      title: "Coffee with Sarah",
       date: addWeeks(new Date(), 1),
-      time: '11:00 AM - 12:00 PM',
-      type: 'personal' as const,
-      description: 'Catch up over coffee and discuss weekend plans.',
-      location: 'Central Café'
+      time: "11:00 AM - 12:00 PM",
+      type: "personal" as const,
+      description: "Catch up over coffee and discuss weekend plans.",
+      location: "Central Café",
     },
     {
-      id: '5',
-      title: 'Board Meeting',
+      id: "5",
+      title: "Board Meeting",
       date: addWeeks(new Date(), 1),
-      time: '3:00 PM - 5:00 PM',
-      type: 'work' as const,
-      description: 'Quarterly board meeting to review performance and strategy.',
-      location: 'Boardroom',
-      attendees: ['CEO', 'CTO', 'CFO', 'Board Members']
-    }
+      time: "3:00 PM - 5:00 PM",
+      type: "work" as const,
+      description:
+        "Quarterly board meeting to review performance and strategy.",
+      location: "Boardroom",
+      attendees: ["CEO", "CTO", "CFO", "Board Members"],
+    },
   ];
 
-  // Sample weather data
   const sampleWeather = [
     {
       date: new Date(),
-      condition: 'sunny' as const,
+      condition: "sunny" as const,
       temperature: 24,
       humidity: 65,
-      description: 'partly cloudy'
+      description: "partly cloudy",
     },
     {
       date: addDays(new Date(), 1),
-      condition: 'cloudy' as const,
+      condition: "cloudy" as const,
       temperature: 19,
       humidity: 78,
-      description: 'overcast'
+      description: "overcast",
     },
     {
       date: addDays(new Date(), 2),
-      condition: 'rainy' as const,
+      condition: "rainy" as const,
       temperature: 16,
       humidity: 85,
-      description: 'light rain'
+      description: "light rain",
     },
     {
       date: addDays(new Date(), 3),
-      condition: 'sunny' as const,
+      condition: "sunny" as const,
       temperature: 22,
       humidity: 60,
-      description: 'clear sky'
+      description: "clear sky",
     },
     {
       date: addDays(new Date(), 4),
-      condition: 'cloudy' as const,
+      condition: "cloudy" as const,
       temperature: 18,
       humidity: 72,
-      description: 'mostly cloudy'
-    }
+      description: "mostly cloudy",
+    },
   ];
+
   const weatherDays: WeatherDay[] =
     (weatherData?.recommendations || []).map((rec: any) => ({
       dateRange: rec.dateRange,
@@ -131,9 +156,6 @@ export function WeatherSuggestion({ destination, onDateSelect }: WeatherSuggesti
       score: rec.score,
       description: rec.description,
     })) || [];
-
-  const [showCalendar, setShowCalendar] = useState(false);
-  const [date, setDate] = useState<DateRange | undefined>();
 
   return (
     <div className="space-y-4">
@@ -161,34 +183,48 @@ export function WeatherSuggestion({ destination, onDateSelect }: WeatherSuggesti
         </div>
       ) : (
         <div className="grid gap-3">
-          {weatherDays.map((day, index) => (
-            <Card
-              key={index}
-              className="p-4 hover-elevate cursor-pointer"
-              onClick={() => {
-                onDateSelect(day.dateRange);
-              }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-medium">{day.dateRange}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {day.condition}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold">
-                    {day.temperature}°C
+          {weatherDays.map((day, index) => {
+            const isSelected =
+              date &&
+              format(date.from!, "MMM d") === day.dateRange.split(" - ")[0];
+
+            return (
+              <Card
+                key={index}
+                className={`p-4 hover-elevate cursor-pointer ${
+                  isSelected ? "border-2 border-blue-500" : ""
+                }`}
+                onClick={() => {
+                  onDateSelect(day.dateRange);
+                  const parsed = parseDateRange(
+                    day.dateRange,
+                    new Date().getFullYear()
+                  );
+                  if (parsed) {
+                    setDate(parsed);
+                  }
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-medium">{day.dateRange}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {day.condition}
+                    </p>
                   </div>
-                  <Badge>{day.score}% Perfect</Badge>
+                  <div className="text-right">
+                    <div className="text-lg font-semibold">
+                      {day.temperature}°C
+                    </div>
+                    <Badge>{day.score}% Perfect</Badge>
+                  </div>
                 </div>
-              </div>
-            </Card>
-          ))}
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      {/* Button to open calendar */}
       <Button
         variant="outline"
         className="w-full"
@@ -197,11 +233,9 @@ export function WeatherSuggestion({ destination, onDateSelect }: WeatherSuggesti
         I'll choose my own dates
       </Button>
 
-      {/* Calendar Modal */}
       {showCalendar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-         <div className="bg-white dark:bg-background rounded-lg shadow-lg p-6 w-full max-w-4xl relative max-h-screen overflow-y-auto">
-            {/* Close button */}
+          <div className="bg-white dark:bg-background rounded-lg shadow-lg p-6 w-full max-w-4xl relative max-h-screen overflow-y-auto">
             <button
               className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-2xl"
               onClick={() => setShowCalendar(false)}
@@ -215,11 +249,12 @@ export function WeatherSuggestion({ destination, onDateSelect }: WeatherSuggesti
             </h4>
 
             <WeatherCalendar
-                onDateSelect={handleDateSelect}
+              onDateSelect={handleDateSelect}
               onRangeSelect={handleRangeSelect}
               events={sampleEvents}
               weather={sampleWeather}
               className="w-full"
+              selectedRange={date}
             />
 
             <div className="flex justify-end gap-2 mt-6">

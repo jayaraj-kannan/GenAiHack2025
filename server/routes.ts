@@ -7,6 +7,7 @@ import { z } from "zod";
 import dotenv from "dotenv";
 
 dotenv.config();
+const googleApiKey = process.env.GOOGLE_MAPS_API_KEY || "";
 export async function registerRoutes(app: Express): Promise<Server> {
   // Trip planning routes
   
@@ -14,7 +15,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/trips", async (req, res) => {
     try {
       const tripData = insertTripSchema.parse(req.body);
-      const trip = await storage.createTrip(tripData);
+      const userId = req.body.userId;
+      const trip = await storage.createTrip(userId, tripData);
       res.json(trip);
     } catch (error) {
       console.error("Error creating trip:", error);
@@ -35,14 +37,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Internal server error" });
     }
   });
-
+  // Get all trips for a user
+  app.get("/api/users/:userId/trips", async (req, res) => {
+    try {
+      const trips = await storage.getTripsByUser(req.params.userId);
+      res.json(trips);
+    } catch (error) {
+      console.error("Error fetching user trips:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
   // Get trip itineraries
   app.get("/api/trips/:id/itineraries", async (req, res) => {
     try {
       const itineraries = await storage.getTripItineraries(req.params.id);
+      console.log("Itineraries fetched:", itineraries);
       res.json(itineraries);
     } catch (error) {
       console.error("Error fetching itineraries:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+  // Get trip itineraries
+  app.post("/api/trips/:id/itineraries", async (req, res) => {
+    try {
+      const itineraries = await storage.updateItinerary(req.params.id, req.body);
+      res.json(itineraries);
+    } catch (error) {
+      console.error("Error updating itineraries:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -90,7 +112,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         weatherOptimized: aiItinerary.weatherOptimized,
         moodMatched: aiItinerary.moodMatched,
       });
-      console.log("Itinerary generated for trip:", savedItineraries);
     } catch (error) {
       console.error("Error generating itinerary:", error);
       res.status(500).json({ error: "Failed to generate itinerary" });
@@ -170,7 +191,7 @@ app.get("/api/destinations/search", async (req, res) => {
       return res.json({ suggestions: [] });
     }
 
-    const googleApiKey = process.env.GOOGLE_MAPS_API_KEY;
+    
     // Step 1: Call Google Places Autocomplete
     const autoUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
       query
@@ -213,7 +234,57 @@ app.get("/api/destinations/search", async (req, res) => {
     res.status(500).json({ error: "Failed to search destinations" });
   }
 });
-  
+  async function fetchWeatherPages(
+  apiKey: string,
+  lat: string,
+  lon: string,
+  days: number,
+  pageToken?: string
+): Promise<any> {
+  let url = `https://weather.googleapis.com/v1/forecast/days:lookup?key=${apiKey}&location.latitude=${lat}&location.longitude=${lon}&days=${days}&pageSize=5`;
+  if (pageToken) {
+    url += `&pageToken=${encodeURIComponent(pageToken)}`;
+  }
+
+  const resp = await fetch(url);
+  if (!resp.ok) {
+    throw new Error("Google Weather API unavailable");
+  }
+
+  const data = await resp.json();
+
+  let allForecastDays = data.forecastDays || [];
+
+  // If there's another page and we haven't reached the requested days, fetch it
+  if (data.nextPageToken && allForecastDays.length < days) {
+    const nextData = await fetchWeatherPages(apiKey, lat, lon, days, data.nextPageToken);
+    allForecastDays = [...allForecastDays, ...nextData.forecastDays];
+  }
+
+  return {
+    forecastDays: allForecastDays.slice(0, days), // ensure not more than requested
+    timeZone: data.timeZone,
+  };
+}
+
+app.get("/api/weather", async (req, res) => {
+  try {
+    const { lat, lon, days } = req.query;
+
+    if (!lat || !lon) {
+      return res.status(400).json({ error: "Missing lat or lon" });
+    }
+
+    const numDays = Math.min(Number(days) || 10, 20);
+
+    const result = await fetchWeatherPages(googleApiKey, String(lat), String(lon), numDays);
+
+    res.json(result);
+  } catch (error) {
+    console.error("Error in weather fetch:", error);
+    res.status(500).json({ error: "Failed to fetch weather" });
+  }
+});
 
   // Weather-based travel date suggestions with AI scoring
   app.get("/api/destinations/:destination/best-dates", async (req, res) => {
@@ -266,7 +337,6 @@ app.get("/api/destinations/search", async (req, res) => {
         }
         
         const weatherData = await weatherResponse.json();
-        console.log("Weather data:", weatherData);
         const forecast = weatherData.forecast?.forecastday || [];
         
         // Generate 3-day windows with AI scoring algorithm
@@ -280,7 +350,7 @@ app.get("/api/destinations/search", async (req, res) => {
           recommendations.push({
             dateRange: `${formatDateRange(startDate)} - ${formatDateRange(endDate)}`,
             condition: getMostSignificantCondition(window),
-            temperature: Math.round(window.reduce((sum, day) => sum + day.day.avgtemp_c, 0) / 3),
+            temperature: Math.round(window.reduce((sum: number, day: any) => sum + day.day.avgtemp_c, 0) / 3),
             score: Math.round(score),
             description: generateWeatherDescription(window, score)
           });

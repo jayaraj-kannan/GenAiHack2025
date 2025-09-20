@@ -1,12 +1,12 @@
-import { 
-  type User, type InsertUser, 
-  type Trip, type InsertTrip, 
-  type Itinerary, type InsertItinerary, 
-  type Booking, type InsertBooking 
+import {
+  type User, type InsertUser,
+  type Trip, type InsertTrip,
+  type Itinerary, type InsertItinerary,
+  type Booking, type InsertBooking
 } from "@shared/schema";
 import { db } from "./server_firebase"
-import { 
-  collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where 
+import {
+  collection, doc, setDoc, getDoc, getDocs, updateDoc, query, where
 } from "firebase/firestore";
 import { randomUUID } from "crypto";
 
@@ -33,13 +33,15 @@ export class FirebaseStorage {
   }
 
   // Trip methods
-  async createTrip(insertTrip: InsertTrip): Promise<Trip> {
+  async createTrip(userId: string, insertTrip: InsertTrip): Promise<Trip> {
     const id = randomUUID();
     const now = new Date();
     const trip: Trip = {
       id,
-      userId: (insertTrip as any).userId ?? null,
+      userId,
       destination: insertTrip.destination,
+      destinationDetails: insertTrip.destinationDetails ?? null,
+      description: insertTrip.description,
       duration: insertTrip.duration,
       moods: insertTrip.moods,
       travelMode: insertTrip.travelMode ?? null,
@@ -53,6 +55,18 @@ export class FirebaseStorage {
     };
     await setDoc(doc(db, "trips", id), trip);
     return trip;
+  }
+
+  // get trips for user
+  async getTripsByUser(userId: string): Promise<Trip[]> {
+    const tripsRef = collection(db, "trips");
+    const q = query(tripsRef, where("userId", "==", userId));
+    const snap = await getDocs(q);
+
+    return snap.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    })) as Trip[];
   }
 
   async getTrip(id: string): Promise<Trip | undefined> {
@@ -79,8 +93,8 @@ export class FirebaseStorage {
   // Itinerary methods
   async createItinerary(insertItinerary: InsertItinerary): Promise<Itinerary> {
     const id = randomUUID();
-    const itinerary: Itinerary = { 
-      ...insertItinerary, 
+    const itinerary: Itinerary = {
+      ...insertItinerary,
       id,
       createdAt: new Date(),
     };
@@ -108,8 +122,8 @@ export class FirebaseStorage {
   // Booking methods
   async createBooking(insertBooking: InsertBooking): Promise<Booking> {
     const id = randomUUID();
-    const booking: Booking = { 
-      ...insertBooking, 
+    const booking: Booking = {
+      ...insertBooking,
       id,
       status: insertBooking.status || "pending",
       bookedAt: new Date(),

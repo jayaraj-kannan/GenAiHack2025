@@ -179,7 +179,6 @@ Format the response as JSON with this structure:
         }
       });
     });
-    console.log("Generated Itinerary:", itinerary);
     return itinerary;
 
   } catch (error) {
@@ -315,7 +314,6 @@ Respond in JSON with the following structure:
     }
 
     const budget: BudgetEstimation = JSON.parse(rawJson);
-    console.log("Estimated Budget:", budget);
     return budget;
 
   } catch (error) {

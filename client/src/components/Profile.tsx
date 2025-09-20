@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -6,65 +6,75 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { User, LogOut, FileText, LogIn, UserPlus } from "lucide-react"
-import { signInWithGoogle, useAuth } from "@/lib/api"
-import { signOut } from "firebase/auth"
-import { auth } from "@/lib/firebase"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { User, LogOut, FileText, LogIn, UserPlus } from "lucide-react";
+import { signInWithGoogle, useAuth } from "@/lib/api";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export function Profile() {
-  const { user, isAuthenticated, loading } = useAuth()
-  const [openAuth, setOpenAuth] = useState(false)
-  const [isSignUp, setIsSignUp] = useState(false)
+  const { user, isAuthenticated, loading } = useAuth();
+  const [openAuth, setOpenAuth] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
   // Form state
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleGoogleSignIn = async () => {
     try {
-      const result = await signInWithGoogle()
+      const result = await signInWithGoogle();
       if (result?.user) {
-        setOpenAuth(false)
+        setOpenAuth(false);
       }
     } catch (error) {
-      console.error("Google sign-in failed:", error)
+      console.error("Google sign-in failed:", error);
     }
-  }
+  };
 
   const handleLogout = async () => {
     try {
-      await signOut(auth)
+      await signOut(auth);
     } catch (error) {
-      console.error("Logout failed:", error)
+      console.error("Logout failed:", error);
     }
-  }
+  };
 
   const handleEmailAuth = () => {
     // TODO: Replace with real Firebase email/password auth
     if (isSignUp) {
       if (password !== confirmPassword) {
-        alert("Passwords do not match!")
-        return
+        alert("Passwords do not match!");
+        return;
       }
     }
-    setOpenAuth(false)
-  }
-
+    setOpenAuth(false);
+  };
+  const handleScrollToTrips = () => {
+    const tripsSection = document.getElementById("trips");
+    if (tripsSection) {
+      tripsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Optional: highlight after scroll
+      tripsSection.classList.add("ring-2", "ring-primary");
+      setTimeout(() => {
+        tripsSection.classList.remove("ring-2", "ring-primary");
+      }, 2000);
+    }
+  };
   if (loading) {
-    return <p>Loading...</p> // or a spinner
+    return <p>Loading...</p>; // or a spinner
   }
 
   return (
@@ -74,7 +84,10 @@ export function Profile() {
           <Button variant="ghost" className="p-0 rounded-full">
             <Avatar className="h-8 w-8">
               {isAuthenticated && user ? (
-                <AvatarImage src={user.photoURL ?? ""} alt={user.displayName ?? "User"} />
+                <AvatarImage
+                  src={user.photoURL ?? ""}
+                  alt={user.displayName ?? "User"}
+                />
               ) : (
                 <AvatarFallback>
                   <User className="h-4 w-4" />
@@ -89,14 +102,18 @@ export function Profile() {
             <>
               <DropdownMenuLabel>
                 <div className="flex flex-col">
-                  <span className="font-medium">{user.displayName ?? "User"}</span>
-                  <span className="text-xs text-muted-foreground">{user.email}</span>
+                  <span className="font-medium">
+                    {user.displayName ?? "User"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {user.email}
+                  </span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleScrollToTrips}>
                 <FileText className="mr-2 h-4 w-4" />
-                Itineraries
+                Your Trips
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -105,11 +122,21 @@ export function Profile() {
             </>
           ) : (
             <>
-              <DropdownMenuItem onClick={() => { setIsSignUp(false); setOpenAuth(true) }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsSignUp(false);
+                  setOpenAuth(true);
+                }}
+              >
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign In
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => { setIsSignUp(true); setOpenAuth(true) }}>
+              <DropdownMenuItem
+                onClick={() => {
+                  setIsSignUp(true);
+                  setOpenAuth(true);
+                }}
+              >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Sign Up
               </DropdownMenuItem>
@@ -174,7 +201,11 @@ export function Profile() {
 
             {/* Google Sign-in */}
             <div className="flex items-center justify-center">
-              <Button variant="outline" onClick={handleGoogleSignIn} className="w-full">
+              <Button
+                variant="outline"
+                onClick={handleGoogleSignIn}
+                className="w-full"
+              >
                 <img
                   src="https://www.svgrepo.com/show/355037/google.svg"
                   alt="Google"
@@ -187,5 +218,5 @@ export function Profile() {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }
