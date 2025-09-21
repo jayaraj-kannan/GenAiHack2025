@@ -72,7 +72,7 @@ export default function Home() {
   const [tripDuration, setTripDuration] = useState(7);
   const [selectedDates, setSelectedDates] = useState("");
   const [estimatedBudget, setEstimatedBudget] = useState(0);
-
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [budgetData, setBudgetData] = useState<any | null>(null);
   const [loadingBudget, setLoadingBudget] = useState(false);
 
@@ -128,7 +128,23 @@ export default function Home() {
       });
     },
   });
-
+  const loadingMessages = [
+    "🌴 Packing your bags...",
+    "✈️ Booking virtual flights...",
+    "🍹 Mixing some chill vibes...",
+    "🗺️ Planning hidden gems...",
+    "🏖️ Finding sunny beaches...",
+    "🎒 Setting up adventures...",
+    "🍲 Adding tasty food spots...",
+  ];
+  useEffect(() => {
+    if (currentStep === "itinerary" && !itineraries.length) {
+      const interval = setInterval(() => {
+        setLoadingMessageIndex((prev) => (prev + 1) % loadingMessages.length);
+      }, 2000); // change message every 2 secs
+      return () => clearInterval(interval);
+    }
+  }, [currentStep, itineraries.length]);
   const generateItineraryMutation = useMutation({
     mutationFn: generateItinerary,
     onSuccess: async () => {
@@ -574,6 +590,7 @@ export default function Home() {
                   onClick={handleGenerateItinerary}
                   disabled={
                     selectedMoods.length === 0 ||
+                    estimatedBudget === 0 ||
                     createTripMutation.isPending ||
                     generateItineraryMutation.isPending
                   }
@@ -620,8 +637,11 @@ export default function Home() {
             ) : (
               <div className="text-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-                <p className="text-lg">
-                  Loading your personalized itinerary...
+                <p className="text-lg font-semibold mb-2">
+                  ✨ Your trip itinerary is generating...
+                </p>
+                <p className="text-md text-muted-foreground transition-opacity duration-500">
+                  {loadingMessages[loadingMessageIndex]}
                 </p>
               </div>
             )}
