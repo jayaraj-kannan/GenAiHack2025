@@ -134,7 +134,6 @@ export default function Home() {
     onSuccess: async () => {
       const response = await getTripItineraries(currentTripId!);
       setItineraries(response);
-      setCurrentStep("itinerary");
       toast({
         title: "Itinerary Generated!",
         description: "Your personalized AI itinerary is ready.",
@@ -328,6 +327,7 @@ export default function Home() {
   // generate itinerary TODO
   const handleGenerateItinerary = async () => {
     try {
+      setCurrentStep("itinerary");
       if (!selectedDestinationDetails) {
         toast({
           title: "Missing Destination Details",
@@ -543,7 +543,13 @@ export default function Home() {
                     />
                   </Card>
                 </div>
-
+                <Card className="p-6">
+                  <WeatherSuggestion
+                    destination={selectedDestination}
+                    destinationDetails={selectedDestinationDetails}
+                    onDateSelect={setSelectedDates}
+                  />
+                </Card>
                 <Card className="p-6">
                   <TravelMode onModeChange={setSelectedTravelMode} />
                 </Card>
@@ -560,14 +566,6 @@ export default function Home() {
                       onSelect={setEstimatedBudget}
                     />
                   )}
-                </Card>
-
-                <Card className="p-6">
-                  <WeatherSuggestion
-                  destination={selectedDestination}
-                  destinationDetails={selectedDestinationDetails}
-                  onDateSelect={setSelectedDates}
-                  />
                 </Card>
               </div>
 
@@ -627,6 +625,53 @@ export default function Home() {
                 </p>
               </div>
             )}
+            {/* Additional Features */}
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6 text-center hover-elevate">
+                <Users className="h-8 w-8 mx-auto mb-3 text-blue-500" />
+                <h3 className="font-semibold mb-2">Collaborative Planning</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Invite friends and plan together
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => console.log("Group planning")}
+                >
+                  Coming Soon
+                </Button>
+              </Card>
+
+              <Card className="p-6 text-center hover-elevate">
+                <Download className="h-8 w-8 mx-auto mb-3 text-green-500" />
+                <h3 className="font-semibold mb-2">Offline Access</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Download for offline use
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => console.log("Offline download")}
+                >
+                  Coming Soon
+                </Button>
+              </Card>
+
+              <Card className="p-6 text-center hover-elevate">
+                <Sparkles className="h-8 w-8 mx-auto mb-3 text-purple-500" />
+                <h3 className="font-semibold mb-2">AI Plan B</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Real-time adaptive suggestions
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => console.log("AI Plan B")}
+                >
+                  Coming Soon
+                </Button>
+              </Card>
+            </div>
           </div>
         )}
       </main>

@@ -36,7 +36,26 @@ export function BudgetEstimator({ data, onSelect }: BudgetEstimatorProps) {
   const formatCurrency = (value: number) =>
     `₹${value.toLocaleString("en-IN", { maximumFractionDigits: 0 })}`;
 
+  // Example: Assume these props or context values are available or passed in
+  // Replace these with actual values from your parent component or context
+  const travelMood = (data as any)?.travelMood;
+  const tripDays = (data as any)?.tripDays;
+  const tripMode = (data as any)?.tripMode;
+
   if (!data) {
+    const missing: string[] = [];
+    if (!travelMood) missing.push("travel mood");
+    if (!tripDays) missing.push("trip duration");
+    if (!tripMode) missing.push("travel mode");
+
+    if (missing.length > 0) {
+      return (
+        <div className="flex items-center justify-center py-6 text-center">
+          <Info className="h-5 w-5 mr-2 text-amber-500" />
+          Please select {missing.join(", ")} to get a budget estimate.
+        </div>
+      );
+    }
     return (
       <div className="flex items-center justify-center py-6">
         <Loader2 className="h-5 w-5 mr-2 animate-spin" />

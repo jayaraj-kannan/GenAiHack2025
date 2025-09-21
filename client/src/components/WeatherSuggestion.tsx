@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { addDays, addWeeks, parse, format } from "date-fns";
-import { Sun, Loader2 } from "lucide-react";
+import { Sun, Cloud, CloudRain, Loader2 } from "lucide-react"; // 🌤 import icons
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,14 @@ interface WeatherDay {
 
 interface WeatherSuggestionProps {
   destination: string;
-  destinationDetails: Destination | null; // new prop for destination details
+  destinationDetails: Destination | null;
   onDateSelect: (date: string) => void;
 }
 
-function parseDateRange(dateRange: string, year: number): DateRange | undefined {
+function parseDateRange(
+  dateRange: string,
+  year: number
+): DateRange | undefined {
   const parts = dateRange.split(" - ");
   if (parts.length !== 2) return undefined;
   try {
@@ -36,32 +39,90 @@ function parseDateRange(dateRange: string, year: number): DateRange | undefined 
   }
 }
 
+// 🔹 helper: choose icon based on condition
+function getWeatherIcon(condition: string) {
+  const normalized = condition.toLowerCase();
+  if (normalized.includes("rain"))
+    return <CloudRain className="h-5 w-5 text-blue-500" />;
+  if (normalized.includes("cloud"))
+    return <Cloud className="h-5 w-5 text-gray-400" />;
+  return <Sun className="h-5 w-5 text-yellow-500" />;
+}
+
 export function WeatherSuggestion({
   destination,
   destinationDetails,
   onDateSelect,
 }: WeatherSuggestionProps) {
-  // 🔹 Get AI-based weather suggestions
-  const { data: weatherData, isLoading, error } = useQuery({
+  const {
+    data: weatherData,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["weather", destination],
     queryFn: () => getWeatherSuggestions(destination, 14),
     enabled: !!destination,
   });
-
-  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [customSelected, setCustomSelected] = useState(false);
   const [showCalendar, setShowCalendar] = useState(false);
+  const [date, setDate] = useState<DateRange | undefined>(undefined);
+  const [selectedDays, setSelectedDays] = useState<{ date: Date; condition: string; temperature: number }[]>([]);
+  const [selectedSummary, setSelectedSummary] = useState<{
+  range: string;
+  condition: string;
+  temperature: number | null;
+} | null>(null);
+  const handleRangeSelect = (startDate: Date, endDate: Date | null) => {
+  if (startDate && endDate) {
+    setDate({ from: startDate, to: endDate });
+    const range = `${format(startDate, "LLL dd, y")} - ${format(
+      endDate,
+      "LLL dd, y"
+    )}`;
+    const days = calendarWeather.filter(
+      (w) => w.date >= startDate && w.date <= endDate
+    );
+    const avgTemp =
+      days.length > 0
+        ? Math.round(days.reduce((a, b) => a + b.temperature, 0) / days.length)
+        : null;
+    onDateSelect(range);
+    setSelectedSummary({
+      range,
+      condition: days.length > 0 ? days[0].condition : "N/A",
+      temperature: avgTemp,
+    });
+    setSelectedDays(days);
+    setCustomSelected(true);
+  }
+};
 
-  // 🔹 Fetch dynamic forecast only when calendar is opened
-  const {
-    data: forecast,
-    isLoading: forecastLoading,
-  } = useQuery({
-    queryKey: ["forecast", destinationDetails.lat, destinationDetails.lon],
-    queryFn: () => getWeatherForecast(destinationDetails.lat, destinationDetails.lon, 10),
-    enabled: showCalendar && !!destinationDetails.lat && !!destinationDetails.lon,
+  const handleDateSelect = (date: Date) => {
+  setDate({ from: date, to: date });
+  const range = format(date, "LLL dd, y");
+  const dayWeather = calendarWeather.find(
+    (w) => w.date.toDateString() === date.toDateString()
+  );
+  const days = dayWeather ? [dayWeather] : [];
+  const avgTemp = dayWeather ? dayWeather.temperature : null;
+
+  onDateSelect(range);
+  setSelectedSummary({
+      range,
+      condition: days.length > 0 ? days[0].condition : "N/A",
+      temperature: avgTemp,
+    });
+  setSelectedDays(days);
+  setCustomSelected(true);
+};
+  const { data: forecast, isLoading: forecastLoading } = useQuery({
+    queryKey: ["forecast", destinationDetails?.lat, destinationDetails?.lon],
+    queryFn: () =>
+      getWeatherForecast(destinationDetails!.lat, destinationDetails!.lon, 10),
+    enabled:
+      showCalendar && !!destinationDetails?.lat && !!destinationDetails?.lon,
   });
 
-  // 🔹 Normalize forecast into WeatherCalendar format
   const calendarWeather = useMemo(() => {
     if (!forecast) return [];
     return forecast.forecastDays.map((day: any) => {
@@ -78,65 +139,6 @@ export function WeatherSuggestion({
     });
   }, [forecast]);
 
-  const handleDateSelect = (date: Date) => {
-    // optional single-date handling
-  };
-
-  const handleRangeSelect = (startDate: Date, endDate: Date | null) => {
-    console.log("Range selected:", startDate, endDate);
-  };
-
-  // 🔹 Sample events (keep your mock data for now)
-  const sampleEvents = [
-    {
-      id: "1",
-      title: "Team Meeting",
-      date: new Date(),
-      time: "9:00 AM - 10:00 AM",
-      type: "work" as const,
-      description: "Weekly team sync to discuss project progress and upcoming deliverables.",
-      location: "Conference Room A",
-      attendees: ["John Doe", "Jane Smith", "Mike Johnson"],
-    },
-    {
-      id: "2",
-      title: "Dentist Appointment",
-      date: addDays(new Date(), 2),
-      time: "2:00 PM - 3:00 PM",
-      type: "personal" as const,
-      description: "Regular dental checkup and cleaning.",
-      location: "Downtown Dental Clinic",
-    },
-    {
-      id: "3",
-      title: "Project Deadline",
-      date: addDays(new Date(), 5),
-      type: "important" as const,
-      description: "Final submission for the Q4 product launch.",
-      location: "Office",
-    },
-    {
-      id: "4",
-      title: "Coffee with Sarah",
-      date: addWeeks(new Date(), 1),
-      time: "11:00 AM - 12:00 PM",
-      type: "personal" as const,
-      description: "Catch up over coffee and discuss weekend plans.",
-      location: "Central Café",
-    },
-    {
-      id: "5",
-      title: "Board Meeting",
-      date: addWeeks(new Date(), 1),
-      time: "3:00 PM - 5:00 PM",
-      type: "work" as const,
-      description: "Quarterly board meeting to review performance and strategy.",
-      location: "Boardroom",
-      attendees: ["CEO", "CTO", "CFO", "Board Members"],
-    },
-  ];
-
-  // 🔹 AI recommendation cards
   const weatherDays: WeatherDay[] =
     (weatherData?.recommendations || []).map((rec: any) => ({
       dateRange: rec.dateRange,
@@ -172,9 +174,34 @@ export function WeatherSuggestion({
         </div>
       ) : (
         <div className="grid gap-3">
+          {/* 🔹 Show summary card if selection exists */}
+          {selectedSummary && (
+            <Card className="p-4 border-2 border-green-500">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  {getWeatherIcon(selectedSummary.condition)}
+                  <div>
+                    <h4 className="font-medium">{selectedSummary.range}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedSummary.condition}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold">
+                    {selectedSummary.temperature}°C
+                  </div>
+                  <Badge className="bg-green-500 text-white">Selected Days</Badge>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* 🔹 Best Days to Travel stays visible */}
           {weatherDays.map((day, index) => {
             const isSelected =
-              date && format(date.from!, "MMM d") === day.dateRange.split(" - ")[0];
+              date &&
+              format(date.from!, "MMM d") === day.dateRange.split(" - ")[0];
 
             return (
               <Card
@@ -183,20 +210,43 @@ export function WeatherSuggestion({
                   isSelected ? "border-2 border-blue-500" : ""
                 }`}
                 onClick={() => {
-                  onDateSelect(day.dateRange);
-                  const parsed = parseDateRange(day.dateRange, new Date().getFullYear());
+                  const parsed = parseDateRange(
+                    day.dateRange,
+                    new Date().getFullYear()
+                  );
                   if (parsed) {
                     setDate(parsed);
+                    onDateSelect(day.dateRange);
+                    setSelectedDays([
+                      {
+                        date: parsed.from!,
+                        condition: day.condition,
+                        temperature: day.temperature,
+                      },
+                    ]);
+                    setCustomSelected(true);
+                    setSelectedSummary({
+                      range: day.dateRange,
+                      condition: day.condition,
+                      temperature: day.temperature,
+                    });
                   }
                 }}
               >
                 <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-medium">{day.dateRange}</h4>
-                    <p className="text-sm text-muted-foreground">{day.condition}</p>
+                  <div className="flex items-center gap-3">
+                    {getWeatherIcon(day.condition)}
+                    <div>
+                      <h4 className="font-medium">{day.dateRange}</h4>
+                      <p className="text-sm text-muted-foreground">
+                        {day.condition}
+                      </p>
+                    </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-lg font-semibold">{day.temperature}°C</div>
+                    <div className="text-lg font-semibold">
+                      {day.temperature}°C
+                    </div>
                     <Badge>{day.score}% Perfect</Badge>
                   </div>
                 </div>
@@ -206,12 +256,15 @@ export function WeatherSuggestion({
         </div>
       )}
 
+      {/* calendar modal stays the same... */}
       <Button
         variant="outline"
         className="w-full"
         onClick={() => setShowCalendar(true)}
       >
-        I'll choose my own dates
+        {customSelected
+          ? "I'll choose different dates"
+          : "I'll choose my own dates"}
       </Button>
 
       {showCalendar && (
@@ -225,7 +278,9 @@ export function WeatherSuggestion({
               ×
             </button>
 
-            <h4 className="mb-4 text-lg font-semibold">Select your travel dates</h4>
+            <h4 className="mb-4 text-lg font-semibold">
+              Select your travel dates
+            </h4>
 
             {forecastLoading ? (
               <div className="text-center py-6">
@@ -237,8 +292,8 @@ export function WeatherSuggestion({
             ) : (
               <WeatherCalendar
                 onDateSelect={handleDateSelect}
-                onRangeSelect={handleRangeSelect}
-                events={sampleEvents}
+                onRangeSelect={handleRangeSelect} // ✅ pass updated handler
+                events={[]}
                 weather={calendarWeather}
                 className="w-full"
                 selectedRange={date}
@@ -253,11 +308,31 @@ export function WeatherSuggestion({
                 disabled={!date?.from || !date?.to}
                 onClick={() => {
                   if (date?.from && date?.to) {
-                    const dateRangeString = `${format(
-                      date.from,
+                    const range = `${format(date.from, "LLL dd, y")} - ${format(
+                      date.to,
                       "LLL dd, y"
-                    )} - ${format(date.to, "LLL dd, y")}`;
-                    onDateSelect(dateRangeString);
+                    )}`;
+
+                    const days = calendarWeather.filter(
+                      (w) => w.date >= date.from! && w.date <= date.to!
+                    );
+
+                    const avgTemp =
+                      days.length > 0
+                        ? Math.round(
+                            days.reduce((a, b) => a + b.temperature, 0) /
+                              days.length
+                          )
+                        : null;
+
+                    onDateSelect(range);
+                    setSelectedDays(days);
+                    setSelectedSummary({
+                      range,
+                      condition: days.length > 0 ? days[0].condition : "N/A",
+                      temperature: avgTemp,
+                    });
+                    setCustomSelected(true);
                     setShowCalendar(false);
                   }
                 }}

@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "AIzaSyBHRMkF3wgiqxDI1AGJwQzd5DvouziN2rg";
 
 interface MapModalProps {
   readonly open: boolean;
